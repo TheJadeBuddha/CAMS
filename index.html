@@ -1001,7 +1001,7 @@
 
                     <div class="form-group">
                         <label class="form-label">Backend URL</label>
-                        <input type="text" class="form-input" id="backendUrl" placeholder="https://api.bhdc-hse.local/cams">
+                        <input type="text" class="form-input" id="backendUrl" placeholder="https://api.bhdc-hse.local/cams" value="https://script.google.com/macros/s/AKfycbxSbGrWzMzzzpDLHMeYPokttg2h0VLcOpRgh0RAbQVBiDKyE_wsR1_v7e5tXtn2uuw/exec">
                     </div>
 
                     <div class="form-actions">
@@ -2010,10 +2010,18 @@
             }
 
             alert.innerHTML = '<div class="alert alert-warning">Testing connection...</div>';
-            // Simulate connection test
-            setTimeout(() => {
-                alert.innerHTML = '<div class="alert alert-success">Connection test passed. Backend is reachable.</div>';
-            }, 1000);
+            fetch(url + '?action=ping')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        alert.innerHTML = '<div class="alert alert-success">Connection test passed. Backend v' + (data.version || '?') + ' is reachable.</div>';
+                    } else {
+                        alert.innerHTML = '<div class="alert alert-error">Backend responded but returned unexpected data.</div>';
+                    }
+                })
+                .catch(err => {
+                    alert.innerHTML = '<div class="alert alert-error">Connection failed: ' + err.message + '</div>';
+                });
         }
 
         function syncData() {
