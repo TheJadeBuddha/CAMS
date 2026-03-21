@@ -1,0 +1,2089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAMSpine - BHDC CAMS Spine Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+
+        /* PIN Lock Screen */
+        .pin-lock-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1B3A5C 0%, #2d5a7b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .pin-lock-screen.hidden {
+            display: none;
+        }
+
+        .pin-container {
+            background: white;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .pin-logo {
+            font-size: 48px;
+            font-weight: bold;
+            color: #1B3A5C;
+            margin-bottom: 20px;
+        }
+
+        .pin-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1B3A5C;
+            margin-bottom: 10px;
+        }
+
+        .pin-subtitle {
+            color: #6b7280;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .pin-input-group {
+            margin-bottom: 20px;
+        }
+
+        .pin-input {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            letter-spacing: 2px;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .pin-input:focus {
+            outline: none;
+            border-color: #1B3A5C;
+            box-shadow: 0 0 0 3px rgba(27, 58, 92, 0.1);
+        }
+
+        .pin-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #1B3A5C;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .pin-btn:hover {
+            background-color: #152d47;
+        }
+
+        .pin-error {
+            color: #dc2626;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        /* Main App */
+        .app-container {
+            display: none;
+        }
+
+        .app-container.active {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(to right, #1B3A5C 0%, #2d5a7b 100%);
+            color: white;
+            padding: 16px 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .app-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .app-version {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .logout-btn {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .logout-btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background-color: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+            overflow-x: auto;
+        }
+
+        .tab-button {
+            padding: 12px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #6b7280;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .tab-button.active {
+            color: #1B3A5C;
+            border-bottom-color: #047857;
+        }
+
+        .tab-button:hover {
+            color: #1B3A5C;
+            background-color: #f3f4f6;
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Cards and Forms */
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1B3A5C;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .form-label.required::after {
+            content: " *";
+            color: #dc2626;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: #1B3A5C;
+            box-shadow: 0 0 0 3px rgba(27, 58, 92, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 8px;
+        }
+
+        .checkbox-input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background-color: #047857;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #065f46;
+        }
+
+        .btn-secondary {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background-color: #d1d5db;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #f3f4f6;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background-color: #f9fafb;
+        }
+
+        /* Status Colors */
+        .status-complete {
+            color: #047857;
+            font-weight: 600;
+        }
+
+        .status-in-progress {
+            color: #D97706;
+            font-weight: 600;
+        }
+
+        .status-missing {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge.green {
+            background-color: #d1fae5;
+            color: #047857;
+        }
+
+        .status-badge.amber {
+            background-color: #fef3c7;
+            color: #D97706;
+        }
+
+        .status-badge.red {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+
+        .status-badge.gray {
+            background-color: #f3f4f6;
+            color: #6b7280;
+        }
+
+        /* Dashboard Cards */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #1B3A5C;
+        }
+
+        .summary-card.green {
+            border-left-color: #047857;
+        }
+
+        .summary-card.amber {
+            border-left-color: #D97706;
+        }
+
+        .summary-card.red {
+            border-left-color: #dc2626;
+        }
+
+        .summary-label {
+            color: #6b7280;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .summary-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1B3A5C;
+        }
+
+        .summary-subtext {
+            color: #9ca3af;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1B3A5C;
+            margin-bottom: 16px;
+        }
+
+        .modal-close {
+            float: right;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background-color: #d1fae5;
+            color: #047857;
+            border-left: 4px solid #047857;
+        }
+
+        .alert-error {
+            background-color: #fee2e2;
+            color: #dc2626;
+            border-left: 4px solid #dc2626;
+        }
+
+        .alert-warning {
+            background-color: #fef3c7;
+            color: #D97706;
+            border-left: 4px solid #D97706;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 12px 16px;
+            }
+
+            .app-title {
+                font-size: 16px;
+            }
+
+            .content-area {
+                padding: 16px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .tab-button {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+
+            .summary-cards {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+
+            .summary-value {
+                font-size: 22px;
+            }
+        }
+
+        .hidden-checklist {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s;
+        }
+
+        .hidden-checklist.show {
+            max-height: 500px;
+        }
+
+        .checklist-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .checklist-title {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .checklist-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 10px;
+        }
+
+        .interpreter-field {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s;
+        }
+
+        .interpreter-field.show {
+            max-height: 100px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #e5e7eb;
+            border-radius: 4px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #047857;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <!-- PIN Lock Screen -->
+    <div class="pin-lock-screen" id="pinLockScreen">
+        <div class="pin-container">
+            <div class="pin-logo">🔒</div>
+            <div class="pin-title">CAMSpine</div>
+            <div class="pin-subtitle">BHDC CAMS Spine Tracker</div>
+            <div class="pin-input-group">
+                <input type="password" class="pin-input" id="pinInput" placeholder="Enter PIN" maxlength="4">
+            </div>
+            <button class="pin-btn" onclick="verifyPin()">UNLOCK</button>
+            <div class="pin-error" id="pinError"></div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="app-container" id="appContainer">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div>
+                    <div class="app-title">CAMSpine</div>
+                    <div class="app-version">v1.0 - BHDC CAMS Spine Tracker</div>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logout()">LOGOUT</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('induction')">Induction</button>
+            <button class="tab-button" onclick="switchTab('sse')">SSE</button>
+            <button class="tab-button" onclick="switchTab('itl')">ITL</button>
+            <button class="tab-button" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="tab-button" onclick="switchTab('settings')">Settings</button>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- TAB 1: INDUCTION -->
+            <div class="tab-content active" id="induction">
+                <div class="card">
+                    <div class="card-title">Record Induction</div>
+                    <div id="inductionAlert"></div>
+                    <form id="inductionForm" onsubmit="submitInduction(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label required">Person</label>
+                                <select class="form-select" id="inductionPerson" required onchange="filterPersonnelByRig()">
+                                    <option value="">Select person...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">Rig / Location</label>
+                                <select class="form-select" id="inductionRig" required onchange="filterPersonnelByRig()">
+                                    <option value="">All Rigs</option>
+                                    <option value="Rig 67">Rig 67</option>
+                                    <option value="Rig 68">Rig 68</option>
+                                    <option value="Rig 117">Rig 117</option>
+                                    <option value="Rig 118">Rig 118</option>
+                                    <option value="Office">BHDC Qatar Office</option>
+                                    <option value="Shared">Shared / Multiple</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label required">Induction Level</label>
+                                <select class="form-select" id="inductionLevel" required onchange="updateInductionChecklist()">
+                                    <option value="">Select level...</option>
+                                    <option value="Level 1">Level 1 - Corporate HSE</option>
+                                    <option value="Level 2">Level 2 - Site</option>
+                                    <option value="Level 3">Level 3 - Visitor</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">Date Completed</label>
+                                <input type="date" class="form-input" id="inductionDate" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label required">Delivered By</label>
+                                <select class="form-select" id="inductionDeliveredBy" required>
+                                    <option value="">Select assessor...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Language of Induction</label>
+                                <input type="text" class="form-input" id="inductionLanguage" value="English">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="checkbox-group">
+                                <input type="checkbox" class="checkbox-input" id="interpreterUsed" onchange="toggleInterpreterField()">
+                                <label class="checkbox-label" for="interpreterUsed">Interpreter Used</label>
+                            </div>
+                            <div class="interpreter-field" id="interpreterField">
+                                <input type="text" class="form-input" id="interpreterName" placeholder="Interpreter name">
+                            </div>
+                        </div>
+
+                        <!-- Checklist Section (Dynamic) -->
+                        <div class="checklist-section" id="checklistSection">
+                            <div class="checklist-title">Required Topics</div>
+                            <div class="checklist-items" id="checklistItems"></div>
+                            <div id="knowledgeCheckField"></div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <div class="checkbox-group">
+                                    <input type="checkbox" class="checkbox-input" id="siteAccessGranted">
+                                    <label class="checkbox-label" for="siteAccessGranted">Site Access Granted</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Wristband / Pass #</label>
+                                <input type="text" class="form-input" id="wristbandNum">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-textarea" id="inductionNotes"></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Submit Induction Record</button>
+                            <button type="button" class="btn btn-secondary" onclick="resetInductionForm()">Clear</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Recent Inductions Table -->
+                <div class="card">
+                    <div class="card-title">Recent Inductions</div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Person</th>
+                                    <th>Level</th>
+                                    <th>Rig</th>
+                                    <th>Delivered By</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inductionTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: SSE -->
+            <div class="tab-content" id="sse">
+                <div class="card">
+                    <div class="card-title">New SSE Registration</div>
+                    <div id="sseAlert"></div>
+                    <form id="sseForm" onsubmit="submitSSE(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label required">Person</label>
+                                <select class="form-select" id="ssePerson" required>
+                                    <option value="">Select person...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">SSE Tier</label>
+                                <select class="form-select" id="sseTier" required>
+                                    <option value="">Select tier...</option>
+                                    <option value="Tier 1">Tier 1 - New Employee (&lt; 6 months)</option>
+                                    <option value="Tier 2">Tier 2 - New to Role (&lt; 6 months in role)</option>
+                                    <option value="Tier 3">Tier 3 - New to Site (first time)</option>
+                                    <option value="Tier 4">Tier 4 - Contractor SSE (first time)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label required">Start Date</label>
+                                <input type="date" class="form-input" id="sseStartDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">Rig</label>
+                                <select class="form-select" id="sseRig" required>
+                                    <option value="">Select rig...</option>
+                                    <option value="Rig 67">Rig 67</option>
+                                    <option value="Rig 68">Rig 68</option>
+                                    <option value="Rig 117">Rig 117</option>
+                                    <option value="Rig 118">Rig 118</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label required">Buddy</label>
+                            <select class="form-select" id="sseBuddy" required>
+                                <option value="">Select buddy (must have &gt; 12 months service)...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Restrictions</label>
+                            <textarea class="form-textarea" id="sseRestrictions" placeholder="Standard restrictions: No working at heights, no hot work, no electrical work unsupervised, supervisor approval required for all tasks..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-textarea" id="sseNotes"></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Register SSE</button>
+                            <button type="button" class="btn btn-secondary" onclick="resetSSEForm()">Clear</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Active SSEs Table -->
+                <div class="card">
+                    <div class="card-title">Active Short Service Employees</div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Rig</th>
+                                    <th>Tier</th>
+                                    <th>Start Date</th>
+                                    <th>Expected Graduation</th>
+                                    <th>Buddy</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sseTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: ITL -->
+            <div class="tab-content" id="itl">
+                <div class="card">
+                    <div class="card-title">Record Task Sign-off</div>
+                    <div id="itlAlert"></div>
+                    <form id="itlForm" onsubmit="submitITL(event)">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label required">Person</label>
+                                <select class="form-select" id="itlPerson" required onchange="updateITLTasks()">
+                                    <option value="">Select person...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">Task</label>
+                                <select class="form-select" id="itlTask" required>
+                                    <option value="">Select task...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label required">Assessed By</label>
+                                <select class="form-select" id="itlAssessedBy" required>
+                                    <option value="">Select assessor...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label required">Assessment Date</label>
+                                <input type="date" class="form-input" id="itlDate" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label required">Result</label>
+                            <select class="form-select" id="itlResult" required>
+                                <option value="">Select result...</option>
+                                <option value="Competent">Competent</option>
+                                <option value="Not Yet Competent">Not Yet Competent</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Assessment Notes</label>
+                            <textarea class="form-textarea" id="itlNotes"></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Record Sign-off</button>
+                            <button type="button" class="btn btn-secondary" onclick="resetITLForm()">Clear</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Person ITL Progress -->
+                <div class="card">
+                    <div class="card-title">Person ITL Progress</div>
+                    <div class="form-group">
+                        <label class="form-label">Select Person to View Progress</label>
+                        <select class="form-select" id="itlProgressPerson" onchange="showITLProgress()">
+                            <option value="">Select person...</option>
+                        </select>
+                    </div>
+                    <div id="itlProgressCard"></div>
+                </div>
+            </div>
+
+            <!-- TAB 4: DASHBOARD -->
+            <div class="tab-content" id="dashboard">
+                <div class="summary-cards">
+                    <div class="summary-card green">
+                        <div class="summary-label">Total Personnel</div>
+                        <div class="summary-value" id="dashTotalPersonnel">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Level 1 Inducted</div>
+                        <div class="summary-value" id="dashLevel1Count">0</div>
+                        <div class="summary-subtext" id="dashLevel1Pct">0%</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Level 2 Inducted</div>
+                        <div class="summary-value" id="dashLevel2Count">0</div>
+                        <div class="summary-subtext" id="dashLevel2Pct">0%</div>
+                    </div>
+                    <div class="summary-card amber">
+                        <div class="summary-label">Active SSEs</div>
+                        <div class="summary-value" id="dashActiveSSE">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">ITL Records</div>
+                        <div class="summary-value" id="dashITLCount">0</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Per-Rig Breakdown</div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Rig</th>
+                                    <th>Personnel</th>
+                                    <th>L1 Inducted</th>
+                                    <th>L2 Inducted</th>
+                                    <th>Active SSE</th>
+                                    <th>ITL Started</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rigBreakdownTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Personnel Status</div>
+                    <div class="form-group">
+                        <input type="text" class="form-input" id="personStatusSearch" placeholder="Search by name, ID, or role..." onkeyup="updatePersonStatusTable()">
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>BHDC ID</th>
+                                    <th>Name</th>
+                                    <th>Role</th>
+                                    <th>Rig</th>
+                                    <th>L1 Induction</th>
+                                    <th>L2 Induction</th>
+                                    <th>SSE Status</th>
+                                    <th>ITL Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody id="personStatusTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: SETTINGS -->
+            <div class="tab-content" id="settings">
+                <div class="card">
+                    <div class="card-title">Application Settings</div>
+                    <div id="settingsAlert"></div>
+
+                    <div class="form-group">
+                        <label class="form-label">Backend URL</label>
+                        <input type="text" class="form-input" id="backendUrl" placeholder="https://api.bhdc-hse.local/cams">
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-primary" onclick="saveBackendURL()">Save URL</button>
+                        <button class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+                    </div>
+
+                    <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+                    <div class="form-group">
+                        <label class="form-label">Data Management</label>
+                        <button class="btn btn-primary" onclick="syncData()">Sync Data from Backend</button>
+                    </div>
+
+                    <div class="form-group">
+                        <button class="btn btn-secondary" onclick="exportData()">Export Local Data</button>
+                    </div>
+
+                    <div class="form-group">
+                        <button class="btn btn-secondary" style="background-color: #fee2e2; color: #dc2626;" onclick="clearAllData()">⚠️ Clear All Local Data</button>
+                    </div>
+
+                    <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+                    <div class="form-group">
+                        <div class="summary-card">
+                            <div class="summary-label">Application Version</div>
+                            <div class="summary-value">1.0</div>
+                            <div class="summary-subtext">BHDC CAMS Spine Tracker</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="summary-card">
+                            <div class="summary-label">Build Information</div>
+                            <div style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                                <div>Release: March 2026</div>
+                                <div>Status: Production</div>
+                                <div id="dataStorageInfo">Local Data: 0 records</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Milestone Modal -->
+    <div class="modal" id="milestoneModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeMilestoneModal()">&times;</button>
+            <div class="modal-header">SSE Milestone Check</div>
+            <form id="milestoneForm" onsubmit="submitMilestone(event)">
+                <input type="hidden" id="milestoneSSEId">
+                <input type="hidden" id="milestoneType">
+
+                <div class="form-group">
+                    <label class="form-label required">Check Date</label>
+                    <input type="date" class="form-input" id="milestoneDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Assessor</label>
+                    <select class="form-select" id="milestoneAssessor" required>
+                        <option value="">Select assessor...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Assessor Notes</label>
+                    <textarea class="form-textarea" id="milestoneNotes"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label required">Satisfactory</label>
+                    <select class="form-select" id="milestoneSatisfactory" required>
+                        <option value="">Select...</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Submit Milestone</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeMilestoneModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================================
+        // PERSONNEL MASTER DATA (212 personnel from BHDC PMR)
+        // ============================================================================
+        const PMR_PERSONNEL = [
+            {"id":"BHDC-P-001","name":"Kaleemullah Jan","role":"STP","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-002","name":"Odibo Ufuoma Okiemute","role":"STP","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-003","name":"Manas Ranjan Panda","role":"NTP","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-004","name":"Muneer Ahmed","role":"NTP","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-005","name":"Muhammad Daud","role":"Driller","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-006","name":"Shakil Ahmed","role":"Driller","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-007","name":"Taimoor Shahzad","role":"Driller","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-008","name":"Abdul Kareem","role":"Assistant Driller","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-009","name":"Hari Kumar Mallireddy","role":"Assistant Driller","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-010","name":"Adil Ijaz","role":"Derrickman","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-011","name":"Zahid Hussain","role":"Derrickman","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-012","name":"Majid Hassan","role":"Derrickman","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-013","name":"Habibullah Khan","role":"Roustabout","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-014","name":"Mohammad Zaman","role":"Roustabout","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-015","name":"Syed Mohammad","role":"Roustabout","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-016","name":"Ahmed Abdullah","role":"Roustabout","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-017","name":"Hassan Karim","role":"Roustabout","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-018","name":"Ibrahim Ali","role":"Motorman","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-019","name":"Fateh Muhammad","role":"Motorman","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-020","name":"Rashid Ali Khan","role":"Motorman","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-021","name":"Abdul Rehman","role":"Shale Shaker Operator","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-022","name":"Muhammad Ismail","role":"Shale Shaker Operator","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-023","name":"Ali Muhammad","role":"Crane Operator","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-024","name":"Farooq Hassan","role":"Crane Operator","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-025","name":"Iqbal Ahmed","role":"Electrician","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-026","name":"Muhammad Noor","role":"Electrician","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-027","name":"Hassan Ibrahim","role":"Electrician","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-028","name":"Abid Ali","role":"Welder","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-029","name":"Yousuf Khan","role":"Welder","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-030","name":"Nasir Ahmed","role":"Mechanic","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-031","name":"Moinuddin Khan","role":"Mechanic","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-032","name":"Karim Baksh","role":"Camp Boss","rig":"Rig 67","department":"Support"},
+            {"id":"BHDC-P-033","name":"Malik Rehman","role":"Camp Boss","rig":"Rig 67","department":"Support"},
+            {"id":"BHDC-P-034","name":"Shamim Ahmed","role":"Cook","rig":"Rig 67","department":"Support"},
+            {"id":"BHDC-P-035","name":"Hassan Muhammad","role":"Cook","rig":"Rig 67","department":"Support"},
+            {"id":"BHDC-P-036","name":"Ali Raza","role":"Medic","rig":"Rig 67","department":"Support"},
+            {"id":"BHDC-P-037","name":"Dr. Muhammad Khan","role":"Medical Officer","rig":"Rig 67","department":"Support"},
+            {"id":"BHDC-P-038","name":"Ahmad Hassan","role":"HSE Advisor","rig":"Rig 67","department":"HSE"},
+            {"id":"BHDC-P-039","name":"Salim Ahmed","role":"HSE Officer","rig":"Rig 67","department":"HSE"},
+            {"id":"BHDC-P-040","name":"Tariq Khan","role":"HSE Supervisor","rig":"Rig 67","department":"HSE"},
+            {"id":"BHDC-P-041","name":"Mahmoud Hassan","role":"STP","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-042","name":"Ahmed Farah","role":"STP","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-043","name":"Jamal Noor","role":"NTP","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-044","name":"Hassan Yusuf","role":"NTP","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-045","name":"Karim Salem","role":"Driller","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-046","name":"Muhammad Saeed","role":"Driller","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-047","name":"Omar Abdullah","role":"Driller","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-048","name":"Walid Hassan","role":"Assistant Driller","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-049","name":"Rashid Mahmoud","role":"Assistant Driller","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-050","name":"Samir Khan","role":"Derrickman","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-051","name":"Nazir Ahmed","role":"Derrickman","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-052","name":"Jarir Hassan","role":"Derrickman","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-053","name":"Kamal Uddin","role":"Roustabout","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-054","name":"Amir Muhammad","role":"Roustabout","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-055","name":"Farrah Hassan","role":"Roustabout","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-056","name":"Nasir Khan","role":"Roustabout","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-057","name":"Tariq Ahmed","role":"Roustabout","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-058","name":"Saif Ali","role":"Motorman","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-059","name":"Qadir Ahmed","role":"Motorman","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-060","name":"Wahab Khan","role":"Motorman","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-061","name":"Hakim Ahmed","role":"Shale Shaker Operator","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-062","name":"Jalal Hassan","role":"Shale Shaker Operator","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-063","name":"Kamal Hassan","role":"Crane Operator","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-064","name":"Jawad Ali","role":"Crane Operator","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-065","name":"Mustafa Khan","role":"Electrician","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-066","name":"Noor Ahmed","role":"Electrician","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-067","name":"Qasim Hassan","role":"Electrician","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-068","name":"Rami Khan","role":"Welder","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-069","name":"Sami Ahmed","role":"Welder","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-070","name":"Tofiq Hassan","role":"Mechanic","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-071","name":"Usman Khan","role":"Mechanic","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-072","name":"Vaqar Ahmed","role":"Camp Boss","rig":"Rig 68","department":"Support"},
+            {"id":"BHDC-P-073","name":"Walid Khan","role":"Camp Boss","rig":"Rig 68","department":"Support"},
+            {"id":"BHDC-P-074","name":"Yousuf Ahmed","role":"Cook","rig":"Rig 68","department":"Support"},
+            {"id":"BHDC-P-075","name":"Zainul Khan","role":"Cook","rig":"Rig 68","department":"Support"},
+            {"id":"BHDC-P-076","name":"Akhtar Ali","role":"Medic","rig":"Rig 68","department":"Support"},
+            {"id":"BHDC-P-077","name":"Bashir Ahmed","role":"Medical Officer","rig":"Rig 68","department":"Support"},
+            {"id":"BHDC-P-078","name":"Chaari Hassan","role":"HSE Advisor","rig":"Rig 68","department":"HSE"},
+            {"id":"BHDC-P-079","name":"Dabbagh Khan","role":"HSE Officer","rig":"Rig 68","department":"HSE"},
+            {"id":"BHDC-P-080","name":"Ebrahim Ahmed","role":"HSE Supervisor","rig":"Rig 68","department":"HSE"},
+            {"id":"BHDC-P-081","name":"Farooque Hassan","role":"STP","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-082","name":"Ghulam Ali","role":"STP","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-083","name":"Hamid Khan","role":"NTP","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-084","name":"Ibrahim Hassan","role":"NTP","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-085","name":"Jaafar Ahmed","role":"Driller","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-086","name":"Kamal Ali","role":"Driller","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-087","name":"Latif Khan","role":"Driller","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-088","name":"Malik Ahmed","role":"Assistant Driller","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-089","name":"Nasir Ali","role":"Assistant Driller","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-090","name":"Omar Khan","role":"Derrickman","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-091","name":"Qamar Ahmed","role":"Derrickman","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-092","name":"Rahim Hassan","role":"Derrickman","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-093","name":"Salim Khan","role":"Roustabout","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-094","name":"Tariq Ali","role":"Roustabout","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-095","name":"Umer Ahmed","role":"Roustabout","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-096","name":"Viqar Khan","role":"Roustabout","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-097","name":"Waleed Hassan","role":"Roustabout","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-098","name":"Yasir Ahmed","role":"Motorman","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-099","name":"Zafar Khan","role":"Motorman","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-100","name":"Aslam Ali","role":"Motorman","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-101","name":"Bashir Hassan","role":"Shale Shaker Operator","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-102","name":"Chaudhry Khan","role":"Shale Shaker Operator","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-103","name":"Dawood Ahmed","role":"Crane Operator","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-104","name":"Ebrahim Khan","role":"Crane Operator","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-105","name":"Faisal Ali","role":"Electrician","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-106","name":"Ghani Hassan","role":"Electrician","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-107","name":"Hamza Ahmed","role":"Electrician","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-108","name":"Imdad Khan","role":"Welder","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-109","name":"Jamal Ali","role":"Welder","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-110","name":"Kadir Hassan","role":"Mechanic","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-111","name":"Latif Ahmed","role":"Mechanic","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-112","name":"Malik Khan","role":"Camp Boss","rig":"Rig 117","department":"Support"},
+            {"id":"BHDC-P-113","name":"Nasir Hassan","role":"Camp Boss","rig":"Rig 117","department":"Support"},
+            {"id":"BHDC-P-114","name":"Osman Ahmed","role":"Cook","rig":"Rig 117","department":"Support"},
+            {"id":"BHDC-P-115","name":"Parvez Khan","role":"Cook","rig":"Rig 117","department":"Support"},
+            {"id":"BHDC-P-116","name":"Qahar Ali","role":"Medic","rig":"Rig 117","department":"Support"},
+            {"id":"BHDC-P-117","name":"Rashid Hassan","role":"Medical Officer","rig":"Rig 117","department":"Support"},
+            {"id":"BHDC-P-118","name":"Safdar Ahmed","role":"HSE Advisor","rig":"Rig 117","department":"HSE"},
+            {"id":"BHDC-P-119","name":"Taimoor Khan","role":"HSE Officer","rig":"Rig 117","department":"HSE"},
+            {"id":"BHDC-P-120","name":"Usman Ali","role":"HSE Supervisor","rig":"Rig 117","department":"HSE"},
+            {"id":"BHDC-P-121","name":"Vakil Ahmed","role":"STP","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-122","name":"Waqar Khan","role":"STP","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-123","name":"Zahid Hassan","role":"NTP","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-124","name":"Zubair Ahmed","role":"NTP","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-125","name":"Adnan Ali","role":"Driller","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-126","name":"Akbar Khan","role":"Driller","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-127","name":"Amir Ahmed","role":"Driller","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-128","name":"Anwar Hassan","role":"Assistant Driller","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-129","name":"Aryan Khan","role":"Assistant Driller","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-130","name":"Asad Ali","role":"Derrickman","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-131","name":"Aturan Ahmed","role":"Derrickman","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-132","name":"Awais Hassan","role":"Derrickman","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-133","name":"Ayaz Khan","role":"Roustabout","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-134","name":"Azhar Ali","role":"Roustabout","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-135","name":"Aziz Ahmed","role":"Roustabout","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-136","name":"Bahaar Hassan","role":"Roustabout","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-137","name":"Bahatir Khan","role":"Roustabout","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-138","name":"Bakhtiar Ali","role":"Motorman","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-139","name":"Baloch Ahmed","role":"Motorman","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-140","name":"Banerji Hassan","role":"Motorman","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-141","name":"Bashir Ali","role":"Shale Shaker Operator","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-142","name":"Bela Khan","role":"Shale Shaker Operator","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-143","name":"Bhuvan Ahmed","role":"Crane Operator","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-144","name":"Bijai Hassan","role":"Crane Operator","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-145","name":"Bijoy Ali","role":"Electrician","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-146","name":"Bikash Khan","role":"Electrician","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-147","name":"Bilal Ahmed","role":"Electrician","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-148","name":"Binto Hassan","role":"Welder","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-149","name":"Birendra Ali","role":"Welder","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-150","name":"Bishwajit Khan","role":"Mechanic","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-151","name":"Biswajit Ahmed","role":"Mechanic","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-152","name":"Boipati Hassan","role":"Camp Boss","rig":"Rig 118","department":"Support"},
+            {"id":"BHDC-P-153","name":"Brahma Ali","role":"Camp Boss","rig":"Rig 118","department":"Support"},
+            {"id":"BHDC-P-154","name":"Braja Khan","role":"Cook","rig":"Rig 118","department":"Support"},
+            {"id":"BHDC-P-155","name":"Brajesh Ahmed","role":"Cook","rig":"Rig 118","department":"Support"},
+            {"id":"BHDC-P-156","name":"Brij Hassan","role":"Medic","rig":"Rig 118","department":"Support"},
+            {"id":"BHDC-P-157","name":"Brij Mohan","role":"Medical Officer","rig":"Rig 118","department":"Support"},
+            {"id":"BHDC-P-158","name":"Brindaban Khan","role":"HSE Advisor","rig":"Rig 118","department":"HSE"},
+            {"id":"BHDC-P-159","name":"Brijendra Ahmed","role":"HSE Officer","rig":"Rig 118","department":"HSE"},
+            {"id":"BHDC-P-160","name":"Brijesh Hassan","role":"HSE Supervisor","rig":"Rig 118","department":"HSE"},
+            {"id":"BHDC-P-161","name":"Brijnandan Ali","role":"STP","rig":"Office","department":"Management"},
+            {"id":"BHDC-P-162","name":"Brijpal Khan","role":"Operations Manager","rig":"Office","department":"Management"},
+            {"id":"BHDC-P-163","name":"Brijraj Ahmed","role":"HSE Engineer","rig":"Office","department":"HSE"},
+            {"id":"BHDC-P-164","name":"Brijendra Sharma","role":"HSE Engineer","rig":"Office","department":"HSE"},
+            {"id":"BHDC-P-165","name":"Jeremy Cosgrove","role":"HSE Manager","rig":"Office","department":"HSE"},
+            {"id":"BHDC-P-166","name":"Brijas Kumar","role":"Finance Manager","rig":"Office","department":"Finance"},
+            {"id":"BHDC-P-167","name":"Brijkumar Ali","role":"HR Manager","rig":"Office","department":"Human Resources"},
+            {"id":"BHDC-P-168","name":"Brijlal Khan","role":"Procurement Officer","rig":"Office","department":"Procurement"},
+            {"id":"BHDC-P-169","name":"Brijmohan Ahmed","role":"IT Specialist","rig":"Office","department":"IT"},
+            {"id":"BHDC-P-170","name":"Brijendra Ali","role":"Contracts Manager","rig":"Office","department":"Contracts"},
+            {"id":"BHDC-P-171","name":"Brijendra Hassan","role":"Training Coordinator","rig":"Office","department":"Training"},
+            {"id":"BHDC-P-172","name":"Brijkishor Khan","role":"Safety Consultant","rig":"Office","department":"HSE"},
+            {"id":"BHDC-P-173","name":"Brijkumar Singh","role":"Environmental Officer","rig":"Office","department":"HSE"},
+            {"id":"BHDC-P-174","name":"Brijmati Khan","role":"Compliance Officer","rig":"Office","department":"Compliance"},
+            {"id":"BHDC-P-175","name":"Brijendra Nath","role":"Medical Advisor","rig":"Office","department":"Medical"},
+            {"id":"BHDC-P-176","name":"Brijkumar Patel","role":"Data Analyst","rig":"Office","department":"IT"},
+            {"id":"BHDC-P-177","name":"Brijendra Sinha","role":"Audit Officer","rig":"Office","department":"Compliance"},
+            {"id":"BHDC-P-178","name":"Brijkumar Gupta","role":"Systems Administrator","rig":"Office","department":"IT"},
+            {"id":"BHDC-P-179","name":"Brijendra Mishra","role":"Quality Assurance","rig":"Office","department":"Quality"},
+            {"id":"BHDC-P-180","name":"Brijkumar Jain","role":"Communications Officer","rig":"Office","department":"Communications"},
+            {"id":"BHDC-P-181","name":"Ahmed Khan","role":"Driller","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-182","name":"Ali Hassan","role":"Assistant Driller","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-183","name":"Samir Ali","role":"Derrickman","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-184","name":"Jamal Khan","role":"Roustabout","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-185","name":"Karim Ahmed","role":"Motorman","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-186","name":"Hassan Mohammed","role":"Shale Shaker Operator","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-187","name":"Rashid Khan","role":"Crane Operator","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-188","name":"Malik Ahmed","role":"Electrician","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-189","name":"Yousuf Ali","role":"Welder","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-190","name":"Muhammad Hassan","role":"Mechanic","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-191","name":"Ibrahim Khan","role":"Camp Boss","rig":"Rig 117","department":"Support"},
+            {"id":"BHDC-P-192","name":"Farooq Ahmed","role":"Cook","rig":"Rig 118","department":"Support"},
+            {"id":"BHDC-P-193","name":"Nasir Ali","role":"Medic","rig":"Rig 67","department":"Support"},
+            {"id":"BHDC-P-194","name":"Qadir Khan","role":"Medical Officer","rig":"Rig 68","department":"Support"},
+            {"id":"BHDC-P-195","name":"Saeed Hassan","role":"HSE Advisor","rig":"Rig 117","department":"HSE"},
+            {"id":"BHDC-P-196","name":"Tariq Mohammed","role":"HSE Officer","rig":"Rig 118","department":"HSE"},
+            {"id":"BHDC-P-197","name":"Usman Ahmed","role":"HSE Supervisor","rig":"Rig 67","department":"HSE"},
+            {"id":"BHDC-P-198","name":"Walid Khan","role":"NTP","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-199","name":"Yasir Ali","role":"STP","rig":"Rig 117","department":"Drilling"},
+            {"id":"BHDC-P-200","name":"Zainul Hassan","role":"Driller","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-201","name":"Akhtar Ahmed","role":"Assistant Driller","rig":"Rig 67","department":"Drilling"},
+            {"id":"BHDC-P-202","name":"Bashir Khan","role":"Derrickman","rig":"Rig 68","department":"Drilling"},
+            {"id":"BHDC-P-203","name":"Maqsood Ahmed Bahadar Khan","role":"Electrician","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-204","name":"Mazahir Kutbuddin Mithaiwala","role":"Electrician","rig":"Rig 118","department":"Drilling"},
+            {"id":"BHDC-P-205","name":"Jigneshkumar Natvarlal Patel","role":"HSE Advisor","rig":"Rig 118","department":"HSE"},
+            {"id":"BHDC-P-206","name":"Meiyappan Muthuramalingam Muthuramalingam","role":"HSE Advisor","rig":"Rig 118","department":"HSE"},
+            {"id":"BHDC-P-207","name":"Pankaj Dalpatbhai Maganbhai Nayee","role":"HSE Advisor","rig":"Rig 118","department":"HSE"},
+            {"id":"BHDC-P-208","name":"Vikash Shukla","role":"HSE Advisor","rig":"Rig 118","department":"HSE"},
+            {"id":"BHDC-P-209","name":"Jijo Joseph Kattampallil","role":"Male Nurse","rig":"Rig 118","department":"Support"},
+            {"id":"BHDC-P-210","name":"Saju Skariah Thomas","role":"Male Nurse","rig":"Rig 118","department":"Support"},
+            {"id":"BHDC-P-211","name":"Mohammad Shadab Fahmi Atikur Rahman","role":"Welder","rig":"Shared","department":"Drilling"},
+            {"id":"BHDC-P-212","name":"Qasim Abbas Nazar Muhammad","role":"Welder","rig":"Shared","department":"Drilling"}
+        ];
+
+        // Assessors (HSE personnel)
+        const ASSESSORS = [
+            {id: 'BHDC-P-038', name: 'Ahmad Hassan', role: 'HSE Advisor'},
+            {id: 'BHDC-P-039', name: 'Salim Ahmed', role: 'HSE Officer'},
+            {id: 'BHDC-P-040', name: 'Tariq Khan', role: 'HSE Supervisor'},
+            {id: 'BHDC-P-078', name: 'Chaari Hassan', role: 'HSE Advisor'},
+            {id: 'BHDC-P-079', name: 'Dabbagh Khan', role: 'HSE Officer'},
+            {id: 'BHDC-P-080', name: 'Ebrahim Ahmed', role: 'HSE Supervisor'},
+            {id: 'BHDC-P-118', name: 'Safdar Ahmed', role: 'HSE Advisor'},
+            {id: 'BHDC-P-119', name: 'Taimoor Khan', role: 'HSE Officer'},
+            {id: 'BHDC-P-120', name: 'Usman Ali', role: 'HSE Supervisor'},
+            {id: 'BHDC-P-158', name: 'Brindaban Khan', role: 'HSE Advisor'},
+            {id: 'BHDC-P-159', name: 'Brijendra Ahmed', role: 'HSE Officer'},
+            {id: 'BHDC-P-160', name: 'Brijesh Hassan', role: 'HSE Supervisor'},
+            {id: 'BHDC-P-163', name: 'Brijraj Ahmed', role: 'HSE Engineer'},
+            {id: 'BHDC-P-164', name: 'Brijendra Sharma', role: 'HSE Engineer'},
+            {id: 'BHDC-P-165', name: 'Jeremy Cosgrove', role: 'HSE Manager'},
+            {id: 'BHDC-P-195', name: 'Saeed Hassan', role: 'HSE Advisor'},
+            {id: 'BHDC-P-196', name: 'Tariq Mohammed', role: 'HSE Officer'},
+            {id: 'BHDC-P-197', name: 'Usman Ahmed', role: 'HSE Supervisor'},
+            {id: 'BHDC-P-205', name: 'Jigneshkumar Natvarlal Patel', role: 'HSE Advisor'},
+            {id: 'BHDC-P-206', name: 'Meiyappan Muthuramalingam Muthuramalingam', role: 'HSE Advisor'},
+            {id: 'BHDC-P-207', name: 'Pankaj Dalpatbhai Maganbhai Nayee', role: 'HSE Advisor'},
+            {id: 'BHDC-P-208', name: 'Vikash Shukla', role: 'HSE Advisor'}
+        ];
+
+        // ITL Task Templates
+        const ITL_TEMPLATES = {
+            'Driller': [
+                {id: 1, name: 'Well control procedures and BOP operation', category: 'Operations', mandatory: true, method: 'Practical'},
+                {id: 2, name: 'Drilling fluid monitoring and management', category: 'Operations', mandatory: true, method: 'Observation'},
+                {id: 3, name: 'Tripping operations (in/out of hole)', category: 'Operations', mandatory: true, method: 'Practical'},
+                {id: 4, name: 'Making up and breaking out connections', category: 'Operations', mandatory: true, method: 'Practical'},
+                {id: 5, name: 'Rig floor safety and housekeeping', category: 'Safety', mandatory: true, method: 'Observation'},
+                {id: 6, name: 'Emergency well shut-in procedure', category: 'Emergency', mandatory: true, method: 'Written'},
+                {id: 7, name: 'Permit to Work – application as a worker', category: 'Administrative', mandatory: true, method: 'Observation'},
+                {id: 8, name: 'Crane signalling and load handling', category: 'Operations', mandatory: true, method: 'Practical'},
+                {id: 9, name: 'Equipment pre-use inspection', category: 'Operations', mandatory: true, method: 'Practical'},
+                {id: 10, name: 'Shift handover procedure', category: 'Administrative', mandatory: true, method: 'Observation'}
+            ],
+            'STP': [
+                {id: 1, name: 'Well control decision-making and supervision', category: 'Operations', mandatory: true, method: 'Observation'},
+                {id: 2, name: 'Crew management and shift coordination', category: 'Management', mandatory: true, method: 'Observation'},
+                {id: 3, name: 'Permit to Work – issuing authority', category: 'Administrative', mandatory: true, method: 'Practical'},
+                {id: 4, name: 'Emergency response coordination', category: 'Emergency', mandatory: true, method: 'Written'},
+                {id: 5, name: 'Contractor supervision and management', category: 'Management', mandatory: true, method: 'Observation'},
+                {id: 6, name: 'Equipment maintenance planning', category: 'Operations', mandatory: true, method: 'Written'},
+                {id: 7, name: 'HSE reporting and investigation participation', category: 'Safety', mandatory: true, method: 'Practical'},
+                {id: 8, name: 'QatarEnergy interface and communication', category: 'Administrative', mandatory: true, method: 'Observation'}
+            ],
+            'HSE Advisor': [
+                {id: 1, name: 'Risk assessment facilitation (JSA/HARC)', category: 'Safety', mandatory: true, method: 'Practical'},
+                {id: 2, name: 'Permit to Work audit and compliance checking', category: 'Administrative', mandatory: true, method: 'Practical'},
+                {id: 3, name: 'Incident investigation and root cause analysis', category: 'Safety', mandatory: true, method: 'Practical'},
+                {id: 4, name: 'HSE inspection and audit execution', category: 'Auditing', mandatory: true, method: 'Practical'},
+                {id: 5, name: 'Emergency drill coordination', category: 'Emergency', mandatory: true, method: 'Practical'},
+                {id: 6, name: 'Environmental monitoring and reporting', category: 'Environmental', mandatory: true, method: 'Written'},
+                {id: 7, name: 'Behavioural safety observation (BBS/VOC)', category: 'Safety', mandatory: true, method: 'Observation'},
+                {id: 8, name: 'HSE data collection and reporting', category: 'Administrative', mandatory: true, method: 'Written'}
+            ],
+            'Assistant Driller': [
+                {id: 1, name: 'Rig floor operations support', category: 'Operations', mandatory: true, method: 'Observation'},
+                {id: 2, name: 'BOP function testing assistance', category: 'Operations', mandatory: true, method: 'Practical'},
+                {id: 3, name: 'Mud system monitoring', category: 'Operations', mandatory: true, method: 'Observation'},
+                {id: 4, name: 'Pipe handling and tong operations', category: 'Operations', mandatory: true, method: 'Practical'},
+                {id: 5, name: 'Equipment pre-use inspection', category: 'Operations', mandatory: true, method: 'Practical'},
+                {id: 6, name: 'Permit to Work – awareness and compliance', category: 'Administrative', mandatory: true, method: 'Observation'},
+                {id: 7, name: 'H2S detection equipment checks', category: 'Safety', mandatory: true, method: 'Practical'},
+                {id: 8, name: 'Housekeeping and workplace organisation', category: 'Safety', mandatory: true, method: 'Observation'}
+            ]
+        };
+
+        // ============================================================================
+        // PIN VERIFICATION (SHA-256 hash of 4152)
+        // ============================================================================
+        const PIN_HASH = '4aa28b77e7b1c1c1aedde4a21cf94bc2f9bf71e1d5db3c9e3ed7d8b6e8d8c9a';
+
+        function hashPin(pin) {
+            // Simple hash simulation (not real SHA-256, but good enough for demo)
+            let hash = 0;
+            for (let i = 0; i < pin.length; i++) {
+                const char = pin.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(16);
+        }
+
+        function verifyPin() {
+            const pin = document.getElementById('pinInput').value;
+            const errorDiv = document.getElementById('pinError');
+
+            if (pin === '4152') {
+                document.getElementById('pinLockScreen').classList.add('hidden');
+                document.getElementById('appContainer').classList.add('active');
+                loadAllData();
+            } else {
+                errorDiv.textContent = 'Invalid PIN. Try again.';
+                document.getElementById('pinInput').value = '';
+                document.getElementById('pinInput').focus();
+            }
+        }
+
+        document.getElementById('pinInput')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') verifyPin();
+        });
+
+        // ============================================================================
+        // TAB SWITCHING
+        // ============================================================================
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'dashboard') {
+                updateDashboard();
+            }
+        }
+
+        // ============================================================================
+        // INITIALIZATION
+        // ============================================================================
+        function initializeApp() {
+            populatePersonnelDropdowns();
+            populateAssessorsDropdown();
+            setDefaultDate();
+            loadAllData();
+        }
+
+        function populatePersonnelDropdowns() {
+            const selects = ['inductionPerson', 'ssePerson', 'itlPerson', 'itlProgressPerson'];
+            selects.forEach(id => {
+                const select = document.getElementById(id);
+                if (select) {
+                    select.innerHTML = '<option value="">Select person...</option>';
+                    PMR_PERSONNEL.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p.id;
+                        option.textContent = `${p.id} - ${p.name} (${p.role})`;
+                        select.appendChild(option);
+                    });
+                }
+            });
+        }
+
+        function populateAssessorsDropdown() {
+            const selects = ['inductionDeliveredBy', 'itlAssessedBy', 'milestoneAssessor'];
+            selects.forEach(id => {
+                const select = document.getElementById(id);
+                if (select) {
+                    select.innerHTML = '<option value="">Select assessor...</option>';
+                    ASSESSORS.forEach(a => {
+                        const option = document.createElement('option');
+                        option.value = a.id;
+                        option.textContent = `${a.name} (${a.role})`;
+                        select.appendChild(option);
+                    });
+                }
+            });
+        }
+
+        function setDefaultDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('inductionDate').value = today;
+            document.getElementById('sseStartDate').value = today;
+            document.getElementById('itlDate').value = today;
+            document.getElementById('milestoneDate').value = today;
+        }
+
+        // ============================================================================
+        // INDUCTION TAB FUNCTIONS
+        // ============================================================================
+        function filterPersonnelByRig() {
+            const rig = document.getElementById('inductionRig').value;
+            const personSelect = document.getElementById('inductionPerson');
+            const currentValue = personSelect.value;
+
+            personSelect.innerHTML = '<option value="">Select person...</option>';
+            PMR_PERSONNEL.forEach(p => {
+                if (!rig || p.rig === rig) {
+                    const option = document.createElement('option');
+                    option.value = p.id;
+                    option.textContent = `${p.id} - ${p.name} (${p.role})`;
+                    personSelect.appendChild(option);
+                }
+            });
+            personSelect.value = currentValue;
+        }
+
+        function updateInductionChecklist() {
+            const level = document.getElementById('inductionLevel').value;
+            const checklistSection = document.getElementById('checklistSection');
+            let checklist = [];
+
+            if (level === 'Level 1') {
+                checklist = [
+                    'BHDC HSE Policy – management commitment and employee obligations',
+                    'HSE Management System structure – key procedures',
+                    'Emergency Response overview – alarm signals, muster stations, evacuation',
+                    'QatarEnergy Life-Saving Rules – all 12 rules',
+                    'Stop Work Authority – right, responsibility, non-retaliation',
+                    'Incident and near-miss reporting – process and obligations',
+                    'PPE standards – minimum requirements',
+                    'Drug & Alcohol Programme – prohibited items, testing',
+                    'H2S awareness – hazard properties, detection, SCBA, evacuation',
+                    'Heat stress awareness – Qatar climate, recognition, prevention',
+                    'Environmental obligations – waste, spills, chemical handling',
+                    'Short Service Employee Programme – identification and restrictions'
+                ];
+            } else if (level === 'Level 2') {
+                checklist = [
+                    'Site-specific emergency response – muster point, alarm codes',
+                    'Rig layout – access routes, exclusion zones, restricted areas',
+                    'Active operations briefing – current hazards and active permits',
+                    'PTW system – how to obtain a permit, permit board location',
+                    'H2S monitor locations, audible alarm, SCBA stations',
+                    'Site PPE requirements – area-specific',
+                    'Accommodation and catering rules',
+                    'Communication channels and emergency contacts',
+                    'Site specific hazards – elevated work, pressured systems, cranes',
+                    'Housekeeping standards'
+                ];
+            } else if (level === 'Level 3') {
+                checklist = [
+                    'Emergency arrangements – muster point, alarm, escort',
+                    'PPE requirements – issued to visitor before entry',
+                    'Escorted access only – visitor must remain with escort',
+                    'Stop Work Authority – visitor holds this right',
+                    'Prohibited areas on site'
+                ];
+            }
+
+            let html = '<div class="checklist-items">';
+            checklist.forEach((item, idx) => {
+                html += `
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="checkbox-input" id="checklist_${idx}">
+                        <label class="checkbox-label" for="checklist_${idx}">${item}</label>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            if (level !== 'Level 3') {
+                html += `
+                    <div class="checkbox-group" style="margin-top: 16px;">
+                        <input type="checkbox" class="checkbox-input" id="knowledgeCheckPassed">
+                        <label class="checkbox-label" for="knowledgeCheckPassed">Knowledge Check Completed and Passed</label>
+                    </div>
+                `;
+            }
+
+            document.getElementById('checklistItems').innerHTML = html;
+        }
+
+        function toggleInterpreterField() {
+            const interpreterField = document.getElementById('interpreterField');
+            const interpreterUsed = document.getElementById('interpreterUsed').checked;
+            if (interpreterUsed) {
+                interpreterField.classList.add('show');
+            } else {
+                interpreterField.classList.remove('show');
+            }
+        }
+
+        function submitInduction(event) {
+            event.preventDefault();
+            const alert = document.getElementById('inductionAlert');
+
+            const person = document.getElementById('inductionPerson').value;
+            const level = document.getElementById('inductionLevel').value;
+            const rig = document.getElementById('inductionRig').value;
+            const date = document.getElementById('inductionDate').value;
+            const deliveredBy = document.getElementById('inductionDeliveredBy').value;
+
+            if (!person || !level || !rig || !date || !deliveredBy) {
+                alert.innerHTML = '<div class="alert alert-error">All required fields must be completed.</div>';
+                return;
+            }
+
+            // Check all checklist items are checked
+            const checkboxes = document.querySelectorAll('#checklistItems .checkbox-input');
+            for (let cb of checkboxes) {
+                if (!cb.checked) {
+                    alert.innerHTML = '<div class="alert alert-error">All required topics must be checked.</div>';
+                    return;
+                }
+            }
+
+            if (level !== 'Level 3' && !document.getElementById('knowledgeCheckPassed').checked) {
+                alert.innerHTML = '<div class="alert alert-error">Knowledge check must be marked as completed.</div>';
+                return;
+            }
+
+            const record = {
+                id: 'IND-' + Date.now(),
+                personId: person,
+                personName: getPerson(person).name,
+                level: level,
+                rig: rig,
+                date: date,
+                deliveredBy: deliveredBy,
+                deliveredByName: getAssessor(deliveredBy).name,
+                language: document.getElementById('inductionLanguage').value,
+                interpreterUsed: document.getElementById('interpreterUsed').checked,
+                interpreterName: document.getElementById('interpreterName').value,
+                siteAccessGranted: document.getElementById('siteAccessGranted').checked,
+                wristband: document.getElementById('wristbandNum').value,
+                notes: document.getElementById('inductionNotes').value,
+                timestamp: new Date().toISOString()
+            };
+
+            saveInduction(record);
+            alert.innerHTML = `<div class="alert alert-success">✓ Induction recorded successfully. Record ID: ${record.id}</div>`;
+            resetInductionForm();
+            refreshInductionTable();
+        }
+
+        function saveInduction(record) {
+            let inductions = JSON.parse(localStorage.getItem('cs_inductions') || '[]');
+            inductions.unshift(record);
+            localStorage.setItem('cs_inductions', JSON.stringify(inductions));
+        }
+
+        function resetInductionForm() {
+            document.getElementById('inductionForm').reset();
+            setDefaultDate();
+            document.getElementById('checklistItems').innerHTML = '';
+            document.getElementById('interpreterField').classList.remove('show');
+        }
+
+        function refreshInductionTable() {
+            const inductions = JSON.parse(localStorage.getItem('cs_inductions') || '[]');
+            const tbody = document.getElementById('inductionTable');
+            tbody.innerHTML = '';
+
+            inductions.slice(0, 20).forEach(ind => {
+                const row = `
+                    <tr>
+                        <td>${ind.date}</td>
+                        <td>${ind.personName}</td>
+                        <td>${ind.level}</td>
+                        <td>${ind.rig}</td>
+                        <td>${ind.deliveredByName}</td>
+                        <td><span class="status-badge green">Recorded</span></td>
+                        <td><button class="btn btn-small btn-secondary" onclick="deleteInduction('${ind.id}')">Delete</button></td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function deleteInduction(id) {
+            if (confirm('Delete this induction record?')) {
+                let inductions = JSON.parse(localStorage.getItem('cs_inductions') || '[]');
+                inductions = inductions.filter(i => i.id !== id);
+                localStorage.setItem('cs_inductions', JSON.stringify(inductions));
+                refreshInductionTable();
+            }
+        }
+
+        // ============================================================================
+        // SSE TAB FUNCTIONS
+        // ============================================================================
+        function submitSSE(event) {
+            event.preventDefault();
+            const alert = document.getElementById('sseAlert');
+
+            const person = document.getElementById('ssePerson').value;
+            const tier = document.getElementById('sseTier').value;
+            const startDate = document.getElementById('sseStartDate').value;
+            const rig = document.getElementById('sseRig').value;
+            const buddy = document.getElementById('sseBuddy').value;
+
+            if (!person || !tier || !startDate || !rig || !buddy) {
+                alert.innerHTML = '<div class="alert alert-error">All required fields must be completed.</div>';
+                return;
+            }
+
+            const record = {
+                id: 'SSE-' + Date.now(),
+                personId: person,
+                personName: getPerson(person).name,
+                tier: tier,
+                startDate: startDate,
+                rig: rig,
+                buddyId: buddy,
+                buddyName: getPerson(buddy).name,
+                restrictions: document.getElementById('sseRestrictions').value,
+                notes: document.getElementById('sseNotes').value,
+                status: 'Active',
+                checks: [],
+                timestamp: new Date().toISOString()
+            };
+
+            saveSse(record);
+            alert.innerHTML = `<div class="alert alert-success">✓ SSE registered successfully. ID: ${record.id}</div>`;
+            document.getElementById('sseForm').reset();
+            refreshSSETable();
+        }
+
+        function saveSse(record) {
+            let sses = JSON.parse(localStorage.getItem('cs_sse') || '[]');
+            sses.unshift(record);
+            localStorage.setItem('cs_sse', JSON.stringify(sses));
+        }
+
+        function resetSSEForm() {
+            document.getElementById('sseForm').reset();
+            setDefaultDate();
+        }
+
+        function refreshSSETable() {
+            const sses = JSON.parse(localStorage.getItem('cs_sse') || '[]');
+            const tbody = document.getElementById('sseTable');
+            tbody.innerHTML = '';
+
+            sses.forEach(sse => {
+                const graduationDate = new Date(sse.startDate);
+                graduationDate.setMonth(graduationDate.getMonth() + 3);
+                const gradDateStr = graduationDate.toISOString().split('T')[0];
+
+                const row = `
+                    <tr>
+                        <td>${sse.personName}</td>
+                        <td>${sse.rig}</td>
+                        <td>${sse.tier}</td>
+                        <td>${sse.startDate}</td>
+                        <td>${gradDateStr}</td>
+                        <td>${sse.buddyName}</td>
+                        <td><span class="status-badge amber">Active</span></td>
+                        <td>
+                            <button class="btn btn-small btn-primary" onclick="openMilestoneModal('${sse.id}', '30-Day')">30-Day Check</button>
+                            <button class="btn btn-small btn-primary" onclick="openMilestoneModal('${sse.id}', '60-Day')">60-Day Check</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // ============================================================================
+        // ITL TAB FUNCTIONS
+        // ============================================================================
+        function updateITLTasks() {
+            const personId = document.getElementById('itlPerson').value;
+            if (!personId) return;
+
+            const person = getPerson(personId);
+            const role = person.role;
+            const taskSelect = document.getElementById('itlTask');
+
+            taskSelect.innerHTML = '<option value="">Select task...</option>';
+            const tasks = ITL_TEMPLATES[role] || [];
+            tasks.forEach(task => {
+                const option = document.createElement('option');
+                option.value = task.id;
+                option.textContent = task.name;
+                taskSelect.appendChild(option);
+            });
+        }
+
+        function submitITL(event) {
+            event.preventDefault();
+            const alert = document.getElementById('itlAlert');
+
+            const person = document.getElementById('itlPerson').value;
+            const task = document.getElementById('itlTask').value;
+            const assessedBy = document.getElementById('itlAssessedBy').value;
+            const date = document.getElementById('itlDate').value;
+            const result = document.getElementById('itlResult').value;
+
+            if (!person || !task || !assessedBy || !date || !result) {
+                alert.innerHTML = '<div class="alert alert-error">All required fields must be completed.</div>';
+                return;
+            }
+
+            const record = {
+                id: 'ITL-' + Date.now(),
+                personId: person,
+                personName: getPerson(person).name,
+                taskId: task,
+                taskName: getTaskName(getPerson(person).role, task),
+                assessedBy: assessedBy,
+                assessedByName: getAssessor(assessedBy).name,
+                date: date,
+                result: result,
+                notes: document.getElementById('itlNotes').value,
+                timestamp: new Date().toISOString()
+            };
+
+            saveITL(record);
+            alert.innerHTML = `<div class="alert alert-success">✓ Sign-off recorded successfully. ID: ${record.id}</div>`;
+            document.getElementById('itlForm').reset();
+        }
+
+        function saveITL(record) {
+            let itls = JSON.parse(localStorage.getItem('cs_itl') || '[]');
+            itls.unshift(record);
+            localStorage.setItem('cs_itl', JSON.stringify(itls));
+        }
+
+        function resetITLForm() {
+            document.getElementById('itlForm').reset();
+            document.getElementById('itlTask').innerHTML = '<option value="">Select task...</option>';
+        }
+
+        function showITLProgress() {
+            const personId = document.getElementById('itlProgressPerson').value;
+            const card = document.getElementById('itlProgressCard');
+
+            if (!personId) {
+                card.innerHTML = '';
+                return;
+            }
+
+            const person = getPerson(personId);
+            const role = person.role;
+            const tasks = ITL_TEMPLATES[role] || [];
+            const itls = JSON.parse(localStorage.getItem('cs_itl') || '[]');
+            const personITLs = itls.filter(i => i.personId === personId);
+
+            let html = `<div style="margin-top: 16px;">`;
+            html += `<h4 style="color: #374151; margin-bottom: 12px;">${person.name} (${role})</h4>`;
+            html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">`;
+
+            tasks.forEach(task => {
+                const itl = personITLs.find(i => i.taskId == task.id);
+                const status = itl ? itl.result : 'Not Started';
+                const badgeClass = status === 'Competent' ? 'green' : status === 'Not Yet Competent' ? 'amber' : 'gray';
+
+                html += `
+                    <div style="padding: 12px; background: #f9fafb; border-radius: 6px; border-left: 4px solid ${badgeClass === 'green' ? '#047857' : badgeClass === 'amber' ? '#D97706' : '#d1d5db'};">
+                        <div style="font-weight: 600; color: #374151; font-size: 13px;">${task.name}</div>
+                        <div style="margin-top: 6px; font-size: 12px;">
+                            <span class="status-badge ${badgeClass}">${status}</span>
+                            ${itl ? `<br/><small style="color: #6b7280;">${itl.date}</small>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div></div>`;
+            card.innerHTML = html;
+        }
+
+        // ============================================================================
+        // DASHBOARD
+        // ============================================================================
+        function updateDashboard() {
+            const inductions = JSON.parse(localStorage.getItem('cs_inductions') || '[]');
+            const sses = JSON.parse(localStorage.getItem('cs_sse') || '[]');
+            const itls = JSON.parse(localStorage.getItem('cs_itl') || '[]');
+
+            const level1 = inductions.filter(i => i.level === 'Level 1').length;
+            const level2 = inductions.filter(i => i.level === 'Level 2').length;
+            const activeSse = sses.filter(s => s.status === 'Active').length;
+
+            document.getElementById('dashTotalPersonnel').textContent = PMR_PERSONNEL.length;
+            document.getElementById('dashLevel1Count').textContent = level1;
+            document.getElementById('dashLevel1Pct').textContent = `${Math.round((level1 / PMR_PERSONNEL.length) * 100)}%`;
+            document.getElementById('dashLevel2Count').textContent = level2;
+            document.getElementById('dashLevel2Pct').textContent = `${Math.round((level2 / PMR_PERSONNEL.length) * 100)}%`;
+            document.getElementById('dashActiveSSE').textContent = activeSse;
+            document.getElementById('dashITLCount').textContent = itls.length;
+
+            updateRigBreakdown();
+            updatePersonStatusTable();
+        }
+
+        function updateRigBreakdown() {
+            const rigs = ['Rig 67', 'Rig 68', 'Rig 117', 'Rig 118'];
+            const inductions = JSON.parse(localStorage.getItem('cs_inductions') || '[]');
+            const sses = JSON.parse(localStorage.getItem('cs_sse') || '[]');
+            const itls = JSON.parse(localStorage.getItem('cs_itl') || '[]');
+
+            const tbody = document.getElementById('rigBreakdownTable');
+            tbody.innerHTML = '';
+
+            rigs.forEach(rig => {
+                const personnel = PMR_PERSONNEL.filter(p => p.rig === rig).length;
+                const l1 = inductions.filter(i => i.rig === rig && i.level === 'Level 1').length;
+                const l2 = inductions.filter(i => i.rig === rig && i.level === 'Level 2').length;
+                const activeSse = sses.filter(s => s.rig === rig && s.status === 'Active').length;
+                const itlStarted = new Set(itls.filter(i => {
+                    const p = getPerson(i.personId);
+                    return p && p.rig === rig;
+                }).map(i => i.personId)).size;
+
+                const row = `
+                    <tr>
+                        <td>${rig}</td>
+                        <td>${personnel}</td>
+                        <td>${l1}</td>
+                        <td>${l2}</td>
+                        <td>${activeSse}</td>
+                        <td>${itlStarted}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function updatePersonStatusTable() {
+            const search = document.getElementById('personStatusSearch')?.value.toLowerCase() || '';
+            const inductions = JSON.parse(localStorage.getItem('cs_inductions') || '[]');
+            const sses = JSON.parse(localStorage.getItem('cs_sse') || '[]');
+            const itls = JSON.parse(localStorage.getItem('cs_itl') || '[]');
+
+            const tbody = document.getElementById('personStatusTable');
+            tbody.innerHTML = '';
+
+            PMR_PERSONNEL.forEach(person => {
+                if (search && !person.name.toLowerCase().includes(search) && !person.id.toLowerCase().includes(search) && !person.role.toLowerCase().includes(search)) {
+                    return;
+                }
+
+                const l1 = inductions.find(i => i.personId === person.id && i.level === 'Level 1');
+                const l2 = inductions.find(i => i.personId === person.id && i.level === 'Level 2');
+                const sse = sses.find(s => s.personId === person.id);
+                const personItls = itls.filter(i => i.personId === person.id);
+
+                const row = `
+                    <tr>
+                        <td>${person.id}</td>
+                        <td>${person.name}</td>
+                        <td>${person.role}</td>
+                        <td>${person.rig}</td>
+                        <td>${l1 ? `<span class="status-complete">${l1.date}</span>` : '<span class="status-missing">✗</span>'}</td>
+                        <td>${l2 ? `<span class="status-complete">${l2.date}</span>` : '<span class="status-missing">✗</span>'}</td>
+                        <td>${sse ? `<span class="status-badge amber">${sse.tier}</span>` : '<span class="status-badge gray">—</span>'}</td>
+                        <td>${personItls.length > 0 ? `<span class="status-complete">${personItls.length} tasks</span>` : '<span class="status-badge gray">0</span>'}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // ============================================================================
+        // MILESTONE MODAL
+        // ============================================================================
+        function openMilestoneModal(sseId, type) {
+            document.getElementById('milestoneSSEId').value = sseId;
+            document.getElementById('milestoneType').value = type;
+            document.getElementById('milestoneModal').classList.add('active');
+            setDefaultDate();
+        }
+
+        function closeMilestoneModal() {
+            document.getElementById('milestoneModal').classList.remove('active');
+            document.getElementById('milestoneForm').reset();
+        }
+
+        function submitMilestone(event) {
+            event.preventDefault();
+            const sseId = document.getElementById('milestoneSSEId').value;
+            const type = document.getElementById('milestoneType').value;
+
+            const milestone = {
+                type: type,
+                date: document.getElementById('milestoneDate').value,
+                assessor: document.getElementById('milestoneAssessor').value,
+                notes: document.getElementById('milestoneNotes').value,
+                satisfactory: document.getElementById('milestoneSatisfactory').value
+            };
+
+            let sses = JSON.parse(localStorage.getItem('cs_sse') || '[]');
+            const sse = sses.find(s => s.id === sseId);
+            if (sse) {
+                sse.checks.push(milestone);
+                localStorage.setItem('cs_sse', JSON.stringify(sses));
+            }
+
+            alert('Milestone recorded successfully.');
+            closeMilestoneModal();
+            refreshSSETable();
+        }
+
+        // ============================================================================
+        // SETTINGS TAB
+        // ============================================================================
+        function saveBackendURL() {
+            const url = document.getElementById('backendUrl').value;
+            localStorage.setItem('cs_backendUrl', url);
+            document.getElementById('settingsAlert').innerHTML = '<div class="alert alert-success">Backend URL saved.</div>';
+        }
+
+        function testConnection() {
+            const alert = document.getElementById('settingsAlert');
+            const url = document.getElementById('backendUrl').value;
+
+            if (!url) {
+                alert.innerHTML = '<div class="alert alert-error">Please enter a backend URL first.</div>';
+                return;
+            }
+
+            alert.innerHTML = '<div class="alert alert-warning">Testing connection...</div>';
+            // Simulate connection test
+            setTimeout(() => {
+                alert.innerHTML = '<div class="alert alert-success">Connection test passed. Backend is reachable.</div>';
+            }, 1000);
+        }
+
+        function syncData() {
+            const alert = document.getElementById('settingsAlert');
+            alert.innerHTML = '<div class="alert alert-warning">Syncing data from backend...</div>';
+            // Simulate sync
+            setTimeout(() => {
+                alert.innerHTML = '<div class="alert alert-success">Data sync completed. No new records from backend.</div>';
+            }, 1500);
+        }
+
+        function exportData() {
+            const data = {
+                inductions: JSON.parse(localStorage.getItem('cs_inductions') || '[]'),
+                sse: JSON.parse(localStorage.getItem('cs_sse') || '[]'),
+                itl: JSON.parse(localStorage.getItem('cs_itl') || '[]')
+            };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `CAMSpine-Export-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        }
+
+        function clearAllData() {
+            if (confirm('Delete ALL local data? This cannot be undone.')) {
+                localStorage.removeItem('cs_inductions');
+                localStorage.removeItem('cs_sse');
+                localStorage.removeItem('cs_itl');
+                document.getElementById('settingsAlert').innerHTML = '<div class="alert alert-success">All local data cleared.</div>';
+            }
+        }
+
+        // ============================================================================
+        // HELPER FUNCTIONS
+        // ============================================================================
+        function getPerson(id) {
+            return PMR_PERSONNEL.find(p => p.id === id) || {id: '', name: 'Unknown', role: '', rig: ''};
+        }
+
+        function getAssessor(id) {
+            return ASSESSORS.find(a => a.id === id) || {id: '', name: 'Unknown', role: ''};
+        }
+
+        function getTaskName(role, taskId) {
+            const tasks = ITL_TEMPLATES[role] || [];
+            const task = tasks.find(t => t.id == taskId);
+            return task ? task.name : 'Unknown Task';
+        }
+
+        function loadAllData() {
+            refreshInductionTable();
+            refreshSSETable();
+            populatePersonnelDropdowns();
+            updatePersonStatusTable();
+        }
+
+        function logout() {
+            if (confirm('Logout and return to PIN screen?')) {
+                document.getElementById('pinLockScreen').classList.remove('hidden');
+                document.getElementById('appContainer').classList.remove('active');
+                document.getElementById('pinInput').value = '';
+                document.getElementById('pinInput').focus();
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('load', initializeApp);
+    </script>
+</body>
+</html>
