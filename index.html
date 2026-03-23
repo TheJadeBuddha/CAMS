@@ -25,7 +25,7 @@ a { color: var(--med); text-decoration: none; }
 .header .status.offline { background: var(--red); }
 
 /* NAV */
-.nav { background: var(--section); display: flex; overflow-x: auto; padding: 0 16px; }
+.nav { background: var(--section); display: flex; overflow-x: auto; padding: 0 16px; position: sticky; top: 48px; z-index: 90; }
 .nav button { background: none; border: none; color: rgba(255,255,255,.7); padding: 10px 18px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; border-bottom: 3px solid transparent; transition: all .2s; }
 .nav button:hover { color: var(--white); background: rgba(255,255,255,.08); }
 .nav button.active { color: var(--white); border-bottom-color: var(--white); }
@@ -205,7 +205,7 @@ tr.clickable:hover { background: #e8f0fe !important; }
 
 /* TRAINING MATRIX */
 #trnMatrix th, #trnMatrix td { padding: 4px 6px; font-size: 11px; text-align: center; white-space: nowrap; }
-#trnMatrix th { position: sticky; top: 0; z-index: 10; }
+#trnMatrix th { position: sticky; top: 0; z-index: 10; background: var(--dark); color: var(--white); }
 #trnMatrix td:first-child, #trnMatrix td:nth-child(2), #trnMatrix td:nth-child(3) { text-align: left; position: sticky; background: var(--white); z-index: 5; font-weight: 600; }
 #trnMatrix td:first-child { left: 0; }
 #trnMatrix td:nth-child(2) { left: 90px; }
@@ -220,7 +220,9 @@ tr.clickable:hover { background: #e8f0fe !important; }
 .trn-nr { background: #f5f5f5 !important; color: #bbb; }
 .trn-c, .trn-x, .trn-e, .trn-m { cursor: pointer; }
 .trn-c:hover, .trn-x:hover, .trn-e:hover, .trn-m:hover { outline: 2px solid var(--med); outline-offset: -2px; }
-#trnMatrix .grp-hdr { background: var(--section) !important; color: var(--white); font-weight: 700; font-size: 12px; text-align: center !important; letter-spacing: .5px; text-transform: uppercase; }
+#trnMatrix .grp-hdr { color: var(--white); font-weight: 700; font-size: 12px; text-align: center !important; letter-spacing: .5px; text-transform: uppercase; }
+#trnMatrix .grp-hdr-cert { background: #1a5276 !important; }
+#trnMatrix .grp-hdr-aware { background: #7d3c98 !important; }
 
 /* PRINT */
 @media print {
@@ -388,6 +390,21 @@ html[dir="rtl"] tbody td { text-align: right; }
         <button class="btn btn-bulk" onclick="runGrandfatheringCheck()" style="margin-left:auto;">Run Grandfathering Check</button>
       </div>
     </div>
+    <div style="margin-top:16px;">
+      <strong style="display:block;margin-bottom:8px;color:var(--dark);">Upload Signed Documents</strong>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <label class="btn btn-primary" style="background:#455A64;cursor:pointer;">
+          📤 Upload SSE Checklist
+          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="uploadSSEDoc(this,'SSE-Checklist')">
+        </label>
+        <label class="btn btn-primary" style="background:#455A64;cursor:pointer;">
+          📤 Upload Restricted Activities Agreement
+          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="uploadSSEDoc(this,'Restricted-Activities')">
+        </label>
+        <input type="text" id="sseUploadId" placeholder="Enter BHDC ID" style="padding:8px 12px;border:1px solid #ccc;border-radius:4px;width:160px;font-size:13px;">
+      </div>
+      <div id="sseUploadStatus" style="margin-top:8px;font-size:13px;"></div>
+    </div>
   </div>
 
   <!-- INDUCTION DASHBOARD -->
@@ -469,6 +486,12 @@ html[dir="rtl"] tbody td { text-align: right; }
       <div class="field">
         <button class="btn btn-primary" onclick="refreshAllData()">Refresh All Data</button>
         <button class="btn btn-danger" onclick="clearCache()" style="margin-left:8px;">Clear Cache</button>
+      </div>
+      <hr style="margin:24px 0;border:none;border-top:1px solid #ddd;">
+      <div class="section-title"><span class="dot" style="background:#e67e22"></span> SSE Grandfathering</div>
+      <div class="field">
+        <p style="font-size:13px;color:#666;margin-bottom:8px;">Mark all employees with &gt;6 months tenure as GRANDFATHERED for SSE and Induction. This is a one-time bulk operation.</p>
+        <button class="btn btn-primary" onclick="runGrandfatheringCheck()" style="background:#e67e22;">Run Grandfathering Check</button>
       </div>
     </div>
   </div>
@@ -815,7 +838,7 @@ async function autoConnect() {
 function showDemoMode() {
   STATE.connected = false;
   document.getElementById('connStatus').className = 'status offline';
-  document.getElementById('connStatus').textContent = 'DEMO MODE';
+  document.getElementById('connStatus').textContent = 'OFFLINE';
   loadDemoDashboard();
 }
 
@@ -833,12 +856,12 @@ async function loadDashboard() {
 
 function loadDemoDashboard() {
   renderDashboard({
-    fleet: { total: 212, rigs: { 'BHDC 67': 53, 'BHDC 68': 62, 'BHDC 117': 47, 'BHDC 118': 48 }, sseCount: 0, sseCompleted: 0, sseOverdue: 0, ssePct: 0,
-             positions: { RO:51, FL:37, DR:14, AD:14, DK:14, TP:15, HS:8, RS:8, AM:6, CM:14, AE:6, CE:12, WF:5, MD:8 } },
-    m1: { total: 212, complete: 0, pct: 0, byRig: { 'BHDC 67':{total:53,complete:0}, 'BHDC 68':{total:62,complete:0}, 'BHDC 117':{total:47,complete:0}, 'BHDC 118':{total:48,complete:0} } },
-    m2: { total: 0, complete: 0, overdue: 0, pct: 0, byRig: { 'BHDC 67':{total:0,complete:0}, 'BHDC 68':{total:0,complete:0}, 'BHDC 117':{total:0,complete:0}, 'BHDC 118':{total:0,complete:0} } },
-    m4: { total: 5316, competent: 0, pct: 0 },
-    m5: { required: 5200, current: 0, missing: 5200, expired: 0, otc: 0 },
+    fleet: { total: 208, rigs: { 'BHDC 67': 52, 'BHDC 68': 60, 'BHDC 117': 48, 'BHDC 118': 48 }, sseCount: 0, sseCompleted: 0, sseOverdue: 0, ssePct: 0,
+             positions: {} },
+    m1: { total: 208, complete: 0, pct: 0, byRig: { 'BHDC 67':{total:52,complete:0}, 'BHDC 68':{total:60,complete:0}, 'BHDC 117':{total:48,complete:0}, 'BHDC 118':{total:48,complete:0} } },
+    m2: { total: 0, complete: 0, overdue: 0, pct: 0, byRig: {} },
+    m4: { total: 0, competent: 0, pct: 0 },
+    m5: { required: 0, current: 0, missing: 0, expired: 0, otc: 0 },
     timestamp: new Date().toISOString()
   });
 }
@@ -1453,12 +1476,42 @@ function readFileAsBase64(file) {
 // =================================================================
 function stampM1Task(bhdcId, taskCode, el) {
   const taskInfo = IND_MAP[taskCode] || { desc: taskCode };
+  if (el && el.classList.contains('done')) {
+    if (confirm('Clear stamp for ' + taskCode + '? This will remove the completion record.')) {
+      clearStamp(bhdcId, taskCode, 'clear_m1', 'task', el);
+    }
+    return;
+  }
   openStampModal(bhdcId, taskCode, taskInfo.desc, 'update_m1', 'task', el);
 }
 
 function stampM2Task(bhdcId, taskCode, el) {
   const taskInfo = SSE_MAP[taskCode] || { desc: taskCode };
+  if (el && el.classList.contains('done')) {
+    if (confirm('Clear stamp for ' + taskCode + '? This will remove the completion record.')) {
+      clearStamp(bhdcId, taskCode, 'clear_m2', 'task', el);
+    }
+    return;
+  }
   openStampModal(bhdcId, taskCode, taskInfo.desc, 'update_m2', 'task', el);
+}
+
+async function clearStamp(bhdcId, code, action, keyName, rowEl) {
+  if (rowEl) rowEl.style.opacity = '0.5';
+  const payload = { action: action, id: bhdcId };
+  payload[keyName] = code;
+  const result = await apiPost(payload);
+  if (result && result.status === 'ok') {
+    if (rowEl) {
+      rowEl.classList.remove('done');
+      const dateEl = rowEl.querySelector('.task-date');
+      if (dateEl) dateEl.outerHTML = '<span class="task-empty">Click to stamp</span>';
+      rowEl.style.opacity = '1';
+    }
+  } else {
+    if (rowEl) rowEl.style.opacity = '1';
+    alert('Clear failed: ' + (result ? result.error : 'No response'));
+  }
 }
 
 function toggleM4(bhdcId, taskId, currentResult, btn) {
@@ -1840,7 +1893,9 @@ async function loadTrainingRegister() {
   let m5Data = STATE.cache.m5All;
 
   // Use training_matrix endpoint for single-call fetch when both caches are empty
-  if (!personnel && !m5Data && STATE.connected) {
+  if (STATE.connected) {
+    STATE.cache.personnel = null;
+    STATE.cache.m5All = null;
     const d = await api('training_matrix');
     if (d && d.personnel && d.records) {
       personnel = d.personnel; STATE.cache.personnel = personnel;
@@ -1917,8 +1972,8 @@ function renderTrainingMatrix(personnel, m5Data) {
     '<th rowspan="2" style="min-width:90px;left:0;">BHDC ID</th>' +
     '<th rowspan="2" style="min-width:140px;left:90px;">Name</th>' +
     '<th rowspan="2" style="min-width:50px;left:230px;">Pos</th>' +
-    '<th colspan="' + certCourses.length + '" class="grp-hdr">Certified (' + certCourses.length + ')</th>' +
-    '<th colspan="' + awareCourses.length + '" class="grp-hdr">Awareness (' + awareCourses.length + ')</th>' +
+    '<th colspan="' + certCourses.length + '" class="grp-hdr grp-hdr-cert">Certified (' + certCourses.length + ')</th>' +
+    '<th colspan="' + awareCourses.length + '" class="grp-hdr grp-hdr-aware">Awareness (' + awareCourses.length + ')</th>' +
     '</tr><tr>' +
     allCourses.map(c => '<th title="' + c.code + ' \u2014 ' + c.name + ' (' + c.validity + ')" style="writing-mode:vertical-lr;text-orientation:mixed;font-size:10px;padding:6px 3px;max-width:28px;white-space:nowrap;">' + c.name.replace(/ \u2014 /g,'\n').substring(0, 30) + '</th>').join('') +
     '</tr>';
@@ -2099,18 +2154,7 @@ async function saveGroupTraining() {
   }
 }
 
-function getDemoM5() {
-  const people = getDemoPersonnel();
-  const records = [];
-  people.forEach(p => {
-    TNA_COURSES.forEach(c => {
-      const req = Math.random() > 0.3 ? 'R' : '';
-      const status = req ? (Math.random() > 0.7 ? 'CURRENT' : Math.random() > 0.5 ? 'MISSING' : 'EXPIRED') : '';
-      records.push({ 'BHDC ID': p['BHDC ID'], 'Course Code': c.code, 'Required': req, 'Status': status });
-    });
-  });
-  return records;
-}
+function getDemoM5() { return []; }
 
 // =================================================================
 // ITL DASHBOARD
@@ -2213,26 +2257,18 @@ function renderITLDashboard(personnel, m4Data) {
   document.getElementById('nycCount').textContent = nycTasks.length + ' items';
 }
 
-function getDemoM4() {
-  const people = getDemoPersonnel();
-  const records = [];
-  people.forEach(p => {
-    const count = Math.floor(Math.random() * 20) + 10;
-    for (let i = 1; i <= count; i++) {
-      const result = Math.random() > 0.6 ? 'C' : Math.random() > 0.5 ? 'NYC' : '';
-      records.push({ 'BHDC ID': p['BHDC ID'], 'Task ID': (p['CAMS Position Code'] || 'RO') + '-A-' + String(i).padStart(2, '0'), 'Result': result, 'Date Assessed': result ? '2026-03-' + String(Math.floor(Math.random() * 22) + 1).padStart(2, '0') : '', 'Mentor Name': result ? 'Mentor ' + String.fromCharCode(65 + Math.floor(Math.random() * 5)) : '' });
-    }
-  });
-  return records;
-}
+function getDemoM4() { return []; }
 
 // =================================================================
 // VOC DASHBOARD
 // =================================================================
 async function loadVOCDashboard() {
-  // VOC data comes from VOCGuard's separate backend — for now demo data
-  let vocData = STATE.cache.vocData;
-  if (!vocData) vocData = getDemoVOC();
+  let vocData = null;
+  if (STATE.connected) {
+    const d = await api('voc_data');
+    if (d && d.records) vocData = d.records;
+  }
+  if (!vocData) vocData = [];
   STATE.cache.vocData = vocData;
   renderVOCDashboard(vocData);
 }
@@ -2302,26 +2338,7 @@ function renderVOCDashboard(vocData) {
   document.getElementById('vocActionCount').textContent = actionItems.length + ' items';
 }
 
-function getDemoVOC() {
-  const rigs = ['BHDC 67', 'BHDC 68', 'BHDC 117', 'BHDC 118'];
-  const activities = ['Manual Handling', 'Working at Heights', 'Hand-Finger Safety', 'Mechanical Lifting', 'Confined Space Entry', 'DROPS Prevention', 'LOTO', 'H2S Emergency', 'PTW Application', 'Heat Stress', 'Journey Management'];
-  const assessors = ['Mohammed Al-Harbi', 'Jeremy Cosgrove', 'Khalid Al-Thani', 'Rajesh Kumar'];
-  const names = ['Ahmed M.', 'Liu P.', 'Singh R.', 'Carlos V.', 'Petrov I.', 'Omar K.', 'James W.', 'Faisal A.', 'Yusuf B.', 'Chen L.', 'Andrei S.', 'Hassan T.'];
-  const outcomes = ['VC', 'VC', 'VC', 'VC', 'VC', 'CwC', 'CwC', 'DR']; // weighted toward VC
-  const records = [];
-  for (let i = 0; i < 120; i++) {
-    const d = new Date(2025, 9 + Math.floor(Math.random() * 6), Math.floor(Math.random() * 28) + 1);
-    records.push({
-      assessee: names[Math.floor(Math.random() * names.length)],
-      rig: rigs[Math.floor(Math.random() * rigs.length)],
-      activity: activities[Math.floor(Math.random() * activities.length)],
-      outcome: outcomes[Math.floor(Math.random() * outcomes.length)],
-      date: d.toISOString().split('T')[0],
-      assessor: assessors[Math.floor(Math.random() * assessors.length)]
-    });
-  }
-  return records;
-}
+function getDemoVOC() { return []; }
 
 // =================================================================
 // ENHANCED DASHBOARD — RIG HEALTH SCORING
@@ -3012,13 +3029,46 @@ async function openInductionChecklistPrint() {
 async function runGrandfatheringCheck() {
   if (!confirm('Run SSE grandfathering check for all employees >6 months? This will mark eligible personnel as GRANDFATHERED.')) return;
 
-  const result = await apiPost('grandfather_sse', {});
+  const result = await apiPost({ action: 'grandfather_sse' });
   if (result && result.success) {
     alert(`Grandfathering complete: ${result.count} personnel marked as grandfathered`);
     loadSSEDashboard();
   } else {
     alert('Error running grandfathering check');
   }
+}
+
+// SSE Document Upload
+async function uploadSSEDoc(input, docType) {
+  const bhdcId = document.getElementById('sseUploadId').value.trim();
+  if (!bhdcId) { alert('Enter a BHDC ID first.'); input.value = ''; return; }
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('sseUploadStatus');
+  statusEl.textContent = 'Uploading ' + file.name + '...';
+  statusEl.style.color = '#666';
+
+  const reader = new FileReader();
+  reader.onload = async function() {
+    const base64 = reader.result.split(',')[1];
+    const result = await apiPost({
+      action: 'upload_doc',
+      id: bhdcId,
+      docType: docType,
+      fileName: file.name,
+      base64: base64,
+      mimeType: file.type
+    });
+    if (result && result.status === 'ok') {
+      statusEl.textContent = '✓ ' + docType + ' uploaded for ' + bhdcId;
+      statusEl.style.color = '#2E7D32';
+    } else {
+      statusEl.textContent = '✗ Upload failed: ' + (result ? result.error : 'No response');
+      statusEl.style.color = '#C62828';
+    }
+    input.value = '';
+  };
+  reader.readAsDataURL(file);
 }
 
 // Multi-language translations
