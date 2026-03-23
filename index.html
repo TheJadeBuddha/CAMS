@@ -915,7 +915,7 @@ function renderPersonnel(list) {
     const m5 = p['M5 OTC %'];
     const m4Display = (m4 && m4 !== '\u2014') ? Math.round(m4 * 100) + '%' : '\u2014';
     const m5Display = (m5 && m5 !== '\u2014') ? Math.round(m5 * 100) + '%' : '\u2014';
-    const sse = p['SSE Status'] === 'YES' ? '<span class="badge amber">SSE</span>' : (needsSSE(p) ? '<span class="badge red">REQ</span>' : '');
+    const sse = p['SSE Status'] === 'GRANDFATHERED' ? '<span class="badge green">GF</span>' : (p['SSE Status'] === 'YES' ? '<span class="badge amber">SSE</span>' : (needsSSE(p) ? '<span class="badge red">REQ</span>' : ''));
     const nat = p['Nationality'] || '';
     const hire = p['Date of Hire'] || '';
     return `<tr class="clickable" onclick="showPersonProfile('${p['BHDC ID']}')">
@@ -996,7 +996,7 @@ function renderPersonProfile(data) {
           <span>${p['Department'] || ''}</span>
           ${p['Nationality'] ? '<span>' + p['Nationality'] + '</span>' : ''}
           ${p['Date of Hire'] ? '<span>Hired: ' + p['Date of Hire'] + '</span>' : ''}
-          ${p['SSE Status'] === 'YES' ? '<span class="badge amber">SSE Active</span>' : (needsSSE(p) ? '<span class="badge red">SSE Required</span>' : '')}
+          ${p['SSE Status'] === 'GRANDFATHERED' ? '<span class="badge green">Grandfathered</span>' : (p['SSE Status'] === 'YES' ? '<span class="badge amber">SSE Active</span>' : (needsSSE(p) ? '<span class="badge red">SSE Required</span>' : ''))}
         </div>
       </div>
       <div class="header-actions">
@@ -2366,7 +2366,7 @@ function calcRigHealth(d, rigName) {
   // SSE % (weight 15%)
   const ssePct = d.m2 ? d.m2.pct : (d.fleet ? (d.fleet.ssePct || 0) : 0);
 
-  const score = Math.round(itlPct * 0.40 + trnPct * 0.25 + indPct * 0.20 + ssePct * 0.15);
+  const score = Math.round((isNaN(itlPct) ? 0 : itlPct) * 0.40 + (isNaN(trnPct) ? 0 : trnPct) * 0.25 + (isNaN(indPct) ? 0 : indPct) * 0.20 + (isNaN(ssePct) ? 0 : ssePct) * 0.15);
   const label = score >= 85 ? 'GREEN' : score >= 70 ? 'AMBER' : 'RED';
   const cls = score >= 85 ? 'rh-green' : score >= 70 ? 'rh-amber' : 'rh-red';
   const color = score >= 85 ? 'var(--green)' : score >= 70 ? 'var(--amber)' : 'var(--red)';
@@ -2385,11 +2385,18 @@ function renderRigHealthCards(d) {
     const rigM2 = d.m2 && d.m2.byRig && d.m2.byRig[r];
     const ssePct = rigM2 && rigM2.total > 0 ? Math.round(rigM2.complete / rigM2.total * 100) : 0;
 
+    // Per-rig ITL
+    const rigM4 = d.m4 && d.m4.byRig && d.m4.byRig[r];
+    const itlPct = rigM4 ? rigM4.pct : 0;
+    // Per-rig TNA
+    const rigM5 = d.m5 && d.m5.byRig && d.m5.byRig[r];
+    const trnPct = rigM5 ? rigM5.pct : 0;
+
     const rigData = {
       m1: { pct: indPct },
       m2: { pct: ssePct },
-      m4: { pct: d.m4 ? d.m4.pct : 0 }, // fleet-level for now
-      m5: { pct: d.m5 ? d.m5.otc : 0 }  // fleet-level for now
+      m4: { pct: itlPct },
+      m5: { otc: trnPct }
     };
     rigHealthData[r] = calcRigHealth(rigData, r);
   });
@@ -2635,6 +2642,7 @@ function esc(str) { return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot
  */
 function needsSSE(person) {
   if (!person) return false;
+  if (person['SSE Status'] === 'GRANDFATHERED') return false; // grandfathered — no SSE needed
   if (person['SSE Status'] === 'YES') return false; // already on SSE
   if (person['SSE Graduated'] === 'YES') return false; // already completed
 
@@ -3044,7 +3052,7 @@ async function runGrandfatheringCheck() {
 
   const result = await apiPost({ action: 'grandfather_sse' });
   if (result && result.status === 'ok') {
-    alert(`Grandfathering complete: ${result.grandfathered} personnel marked as grandfathered, ${result.requiresSSE} require SSE.${result.warnings ? '\n\nWarnings:\n' + result.warnings.join('\n') : ''}`);
+    alert(`Grandfathering complete:\n• ${result.grandfathered} personnel grandfathered\n• ${result.m1RecordsUpdated || 0} M1 induction records completed\n• ${result.m2RecordsUpdated || 0} M2 SSE records completed\n• ${result.requiresSSE} still require SSE${result.warnings ? '\n\nWarnings:\n' + result.warnings.join('\n') : ''}`);
     loadSSEDashboard();
   } else {
     alert('Error running grandfathering: ' + (result ? JSON.stringify(result) : 'No response'));
