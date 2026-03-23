@@ -237,6 +237,15 @@ tr.clickable:hover { background: #e8f0fe !important; }
 }
 .print-header { display: none; }
 .sig-block { display: none; }
+
+/* RTL SUPPORT FOR ARABIC */
+html[dir="rtl"] { direction: rtl; }
+html[dir="rtl"] .nav { flex-direction: row-reverse; }
+html[dir="rtl"] .cards { margin-bottom: 24px; }
+html[dir="rtl"] .table-toolbar { justify-content: flex-end; }
+html[dir="rtl"] table { text-align: right; }
+html[dir="rtl"] thead th { text-align: right; }
+html[dir="rtl"] tbody td { text-align: right; }
 </style>
 </head>
 <body>
@@ -244,7 +253,7 @@ tr.clickable:hover { background: #e8f0fe !important; }
 <!-- HEADER -->
 <div class="header">
   <div>
-    <h1>CAMS v2</h1>
+    <h1>CAMS v2.2</h1>
     <div class="subtitle">BHDC Competency Assurance Management System</div>
   </div>
   <div id="connStatus" class="status offline">OFFLINE</div>
@@ -256,7 +265,10 @@ tr.clickable:hover { background: #e8f0fe !important; }
   <button data-tab="personnel">Personnel</button>
   <button data-tab="training">Training Register</button>
   <button data-tab="itldash">ITL Dashboard</button>
+  <button data-tab="ssedash">SSE Dashboard</button>
+  <button data-tab="inductiondash">Induction Dashboard</button>
   <button data-tab="vocdash">VOC Dashboard</button>
+  <select id="langSelect" onchange="setLanguage(this.value)" style="margin-left:auto;padding:8px 10px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:white;border-radius:4px;font-size:12px;cursor:pointer;"><option value="en">English</option><option value="ar">العربية</option><option value="hi">हिंदी</option><option value="zh">中文</option></select>
   <button data-tab="settings">Settings</button>
 </div>
 
@@ -347,6 +359,54 @@ tr.clickable:hover { background: #e8f0fe !important; }
       <div class="table-toolbar"><strong>NYC Task Details — Requires Attention</strong><span class="count" id="nycCount"></span></div>
       <div style="max-height:400px;overflow-y:auto;">
         <table><thead><tr><th>Employee</th><th>Position</th><th>Rig</th><th>Task</th><th>Description</th><th>Status</th></tr></thead><tbody id="nycTable"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SSE DASHBOARD -->
+  <div id="tab-ssedash" class="tab-panel">
+    <div class="table-toolbar" style="background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:16px;">
+      <strong style="font-size:14px;color:var(--dark);" data-i18n="sseDashTitle">SSE Competency Dashboard</strong>
+      <select id="sseRigFilter" onchange="refreshSSEDashboard()" style="margin-left:8px;"><option value="">All Rigs</option><option>BHDC 67</option><option>BHDC 68</option><option>BHDC 117</option><option>BHDC 118</option></select>
+    </div>
+    <div class="cards" id="sseCards"></div>
+    <div class="chart-row">
+      <div class="chart-box"><h3 data-i18n="sseStatusByRig">SSE Status by Rig</h3><canvas id="chartSSEStatus"></canvas></div>
+      <div class="chart-box"><h3 data-i18n="sseProgressOverTime">SSE Progress Over Time</h3><canvas id="chartSSEProgress"></canvas></div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-toolbar"><strong data-i18n="sseInProgress">SSE In Progress</strong><span class="count" id="sseCount"></span></div>
+      <div style="max-height:400px;overflow-y:auto;">
+        <table><thead><tr><th>Name</th><th>Rig</th><th>Position</th><th>Mentor</th><th>Start Date</th><th>Target End</th><th>Days Remaining</th><th>Status</th></tr></thead><tbody id="sseInProgressTable"></tbody></table>
+      </div>
+    </div>
+    <div style="margin-top:24px;">
+      <strong style="display:block;margin-bottom:12px;color:var(--dark);" data-i18n="printFunctions">Print Functions</strong>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-print" onclick="openSSEChecklistPrint()" style="background:#455A64;"><span style="font-size:16px;">📋</span> Print SSE Checklist</button>
+        <button class="btn btn-print" onclick="openRestrictedActivitiesPrint()" style="background:#455A64;"><span style="font-size:16px;">📋</span> Print Restricted Activities Agreement</button>
+        <button class="btn btn-bulk" onclick="runGrandfatheringCheck()" style="margin-left:auto;">Run Grandfathering Check</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INDUCTION DASHBOARD -->
+  <div id="tab-inductiondash" class="tab-panel">
+    <div class="table-toolbar" style="background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:16px;">
+      <strong style="font-size:14px;color:var(--dark);" data-i18n="inductionDashTitle">M1 Induction Dashboard</strong>
+      <select id="indRigFilter" onchange="refreshInductionDashboard()" style="margin-left:8px;"><option value="">All Rigs</option><option>BHDC 67</option><option>BHDC 68</option><option>BHDC 117</option><option>BHDC 118</option></select>
+    </div>
+    <div class="cards" id="inductionCards"></div>
+    <div class="table-wrap">
+      <div class="table-toolbar"><strong data-i18n="incompleteInductions">Incomplete Inductions</strong><span class="count" id="inductionCount"></span></div>
+      <div style="max-height:400px;overflow-y:auto;">
+        <table><thead><tr><th>Name</th><th>Rig</th><th>Position</th><th>Date of Hire</th><th>Days Since Hire</th><th>Tasks Complete</th><th>Status</th></tr></thead><tbody id="incompleteInductionTable"></tbody></table>
+      </div>
+    </div>
+    <div style="margin-top:24px;">
+      <strong style="display:block;margin-bottom:12px;color:var(--dark);" data-i18n="printFunctions">Print Functions</strong>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-print" onclick="openInductionChecklistPrint()" style="background:#455A64;"><span style="font-size:16px;">📋</span> Print Induction Checklist</button>
       </div>
     </div>
   </div>
@@ -701,6 +761,8 @@ function setupNav() {
       if (btn.dataset.tab === 'personnel') { showPersonnelList(); loadPersonnel(); }
       if (btn.dataset.tab === 'training') loadTrainingRegister();
       if (btn.dataset.tab === 'itldash') loadITLDashboard();
+      if (btn.dataset.tab === 'ssedash') loadSSEDashboard();
+      if (btn.dataset.tab === 'inductiondash') loadInductionDashboard();
       if (btn.dataset.tab === 'vocdash') loadVOCDashboard();
     });
   });
@@ -2566,18 +2628,467 @@ async function sha256(str) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Demo data
+// =================================================================
+// LANGUAGE SUPPORT
+// =================================================================
+function setLanguage(lang) {
+  CURRENT_LANGUAGE = lang;
+  const isRTL = lang === 'ar';
+  document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) {
+      el.textContent = TRANSLATIONS[lang][key];
+    }
+  });
+
+  document.querySelectorAll('.nav button[data-tab]').forEach(btn => {
+    const tabName = btn.dataset.tab;
+    const key = tabName === 'dashboard' ? 'dashboard' :
+                tabName === 'personnel' ? 'personnel' :
+                tabName === 'training' ? 'training' :
+                tabName === 'itldash' ? 'itldash' :
+                tabName === 'ssedash' ? 'ssedash' :
+                tabName === 'inductiondash' ? 'inductiondash' :
+                tabName === 'vocdash' ? 'vocdash' :
+                tabName === 'settings' ? 'settings' : '';
+    if (key && TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) {
+      btn.textContent = TRANSLATIONS[lang][key];
+    }
+  });
+}
+
+// =================================================================
+// SSE DASHBOARD
+// =================================================================
+async function loadSSEDashboard() {
+  const data = await api('sse_dashboard');
+  if (!data) {
+    document.getElementById('sseCards').innerHTML = '<p style="padding:20px;color:var(--grey);">No data — connect to backend</p>';
+    return;
+  }
+
+  const rigFilter = document.getElementById('sseRigFilter').value;
+  const filtered = rigFilter ? data.personnel.filter(p => p.Rig === rigFilter) : data.personnel;
+
+  // KPI Cards
+  const requiring = filtered.filter(p => needsSSE(p)).length;
+  const grandfathered = filtered.filter(p => p['SSE Grandfathered'] === 'YES').length;
+  const completionRate = filtered.length > 0 ? Math.round(filtered.filter(p => p['SSE Status'] === 'YES' || p['SSE Graduated'] === 'YES').length / filtered.length * 100) : 0;
+  const overdue = filtered.filter(p => p['SSE Status'] === 'YES' && new Date() > new Date(p['SSE Target End'])).length;
+
+  document.getElementById('sseCards').innerHTML = `
+    <div class="card"><div class="label" data-i18n="personnelRequiringSSE">Personnel Requiring SSE</div><div class="value">${requiring}</div></div>
+    <div class="card green"><div class="label" data-i18n="grandfathered">Grandfathered</div><div class="value">${grandfathered}</div></div>
+    <div class="card"><div class="label" data-i18n="sseCompletionRate">SSE Completion Rate %</div><div class="value">${completionRate}%</div></div>
+    <div class="card red"><div class="label" data-i18n="overdueSSE">Overdue SSE count</div><div class="value">${overdue}</div></div>
+  `;
+
+  // Table
+  const inProgress = filtered.filter(p => p['SSE Status'] === 'YES' && p['SSE Graduated'] !== 'YES');
+  let tableHtml = '';
+  inProgress.forEach(p => {
+    const startDate = new Date(p['SSE Start Date']).toLocaleDateString();
+    const endDate = new Date(p['SSE Target End']).toLocaleDateString();
+    const daysRemaining = Math.ceil((new Date(p['SSE Target End']) - new Date()) / (1000*60*60*24));
+    tableHtml += `<tr class="clickable" onclick="viewPersonProfile('${p['BHDC ID']}')">
+      <td>${p['Full Name']}</td><td>${p.Rig}</td><td>${p.Position}</td>
+      <td>${p['SSE Mentor'] || '—'}</td><td>${startDate}</td><td>${endDate}</td>
+      <td>${daysRemaining > 0 ? daysRemaining : 0}</td>
+      <td><span class="badge ${daysRemaining > 30 ? 'blue' : daysRemaining > 0 ? 'amber' : 'red'}">${p['SSE Status']}</span></td>
+    </tr>`;
+  });
+  document.getElementById('sseInProgressTable').innerHTML = tableHtml || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--grey);">No SSE in progress</td></tr>';
+  document.getElementById('sseCount').textContent = `${inProgress.length} in progress`;
+
+  refreshSSEDashboard();
+}
+
+function refreshSSEDashboard() {
+  loadSSEDashboard();
+}
+
+// =================================================================
+// INDUCTION DASHBOARD
+// =================================================================
+async function loadInductionDashboard() {
+  const data = await api('induction_dashboard');
+  if (!data) {
+    document.getElementById('inductionCards').innerHTML = '<p style="padding:20px;color:var(--grey);">No data — connect to backend</p>';
+    return;
+  }
+
+  const rigFilter = document.getElementById('indRigFilter').value;
+  const filtered = rigFilter ? data.personnel.filter(p => p.Rig === rigFilter) : data.personnel;
+
+  const requiring = filtered.filter(p => !p['M1 Complete Date']).length;
+  const grandfathered = filtered.filter(p => p['M1 Grandfathered'] === 'YES').length;
+  const completionRate = filtered.length > 0 ? Math.round(filtered.filter(p => p['M1 Complete Date']).length / filtered.length * 100) : 0;
+  const incomplete = filtered.filter(p => !p['M1 Complete Date']).length;
+
+  document.getElementById('inductionCards').innerHTML = `
+    <div class="card"><div class="label" data-i18n="personnelRequiringInduction">Personnel Requiring Induction</div><div class="value">${requiring}</div></div>
+    <div class="card green"><div class="label" data-i18n="grandfathered">Grandfathered</div><div class="value">${grandfathered}</div></div>
+    <div class="card"><div class="label" data-i18n="inductionCompletionRate">Induction Completion Rate %</div><div class="value">${completionRate}%</div></div>
+    <div class="card red"><div class="label" data-i18n="incompleteInductions">Incomplete Inductions</div><div class="value">${incomplete}</div></div>
+  `;
+
+  // Table
+  const incompleteList = filtered.filter(p => !p['M1 Complete Date']);
+  let tableHtml = '';
+  incompleteList.forEach(p => {
+    const hireDate = new Date(p['Date of Hire']).toLocaleDateString();
+    const daysSinceHire = Math.ceil((new Date() - new Date(p['Date of Hire'])) / (1000*60*60*24));
+    const tasksComplete = p['M1 Tasks Complete'] || 0;
+    tableHtml += `<tr class="clickable" onclick="viewPersonProfile('${p['BHDC ID']}')">
+      <td>${p['Full Name']}</td><td>${p.Rig}</td><td>${p.Position}</td>
+      <td>${hireDate}</td><td>${daysSinceHire}</td>
+      <td>${tasksComplete}/27</td>
+      <td><span class="badge ${tasksComplete === 27 ? 'green' : tasksComplete > 13 ? 'amber' : 'red'}">${tasksComplete === 27 ? 'Complete' : 'In Progress'}</span></td>
+    </tr>`;
+  });
+  document.getElementById('incompleteInductionTable').innerHTML = tableHtml || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--grey);">All inductions complete</td></tr>';
+  document.getElementById('inductionCount').textContent = `${incompleteList.length} incomplete`;
+
+  refreshInductionDashboard();
+}
+
+function refreshInductionDashboard() {
+  loadInductionDashboard();
+}
+
+// =================================================================
+// PRINT FUNCTIONS — SSE CHECKLIST
+// =================================================================
+async function openSSEChecklistPrint() {
+  const personId = prompt('Enter BHDC ID to print SSE Checklist:');
+  if (!personId) return;
+
+  const data = await api('sse_dashboard');
+  const person = data.personnel.find(p => p['BHDC ID'] === personId);
+  if (!person) {
+    alert('Person not found');
+    return;
+  }
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; margin: 20px; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .doc-ref { font-size: 10px; color: #666; margin-bottom: 10px; }
+        .person-details { margin: 15px 0; border: 1px solid #ddd; padding: 10px; font-size: 10px; }
+        .person-details div { margin: 3px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #999; padding: 6px; text-align: left; }
+        th { background: #333; color: white; font-weight: bold; }
+        .sig-block { margin-top: 20px; }
+        .sig-line { display: inline-block; margin-right: 40px; border-top: 1px solid #000; width: 120px; text-align: center; font-size: 9px; }
+        .task-section { margin-top: 12px; font-weight: bold; background: #f0f0f0; padding: 4px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h2>BHDC Supervised Site Experience (SSE) Monitoring Checklist</h2>
+        <div class="doc-ref">BHDC-HSE-TRN-FRM-XXX</div>
+      </div>
+
+      <div class="person-details">
+        <div><strong>Name:</strong> ${person['Full Name']} | <strong>BHDC ID:</strong> ${person['BHDC ID']}</div>
+        <div><strong>Position:</strong> ${person.Position} | <strong>Rig:</strong> ${person.Rig}</div>
+        <div><strong>Mentor:</strong> ${person['SSE Mentor'] || '—'} | <strong>SSE Start:</strong> ${person['SSE Start Date'] || '—'} | <strong>Target End:</strong> ${person['SSE Target End'] || '—'}</div>
+      </div>
+
+      <table>
+        <thead><tr><th>Task Code</th><th>Description</th><th>Date Completed</th><th>Mentor Signature</th></tr></thead>
+        <tbody>
+  `;
+
+  let currentSection = '';
+  SSE_TASKS.forEach(task => {
+    if (task.section !== currentSection) {
+      htmlContent += `<tr><td colspan="4" class="task-section">${task.sectionName}</td></tr>`;
+      currentSection = task.section;
+    }
+    htmlContent += `<tr><td>${task.code}</td><td>${task.desc}</td><td></td><td></td></tr>`;
+  });
+
+  htmlContent += `
+        </tbody>
+      </table>
+
+      <div style="margin-top: 20px; font-size: 10px; line-height: 1.6;">
+        <p><strong>Acknowledgement:</strong> I confirm that I have completed the above supervised site experience tasks under the guidance of my assigned Mentor. I understand the safety-critical nature of these tasks and confirm that the information recorded above is true and accurate to the best of my knowledge.</p>
+      </div>
+
+      <div class="sig-block">
+        <div class="sig-line"></div> Employee Signature / Date
+        <div class="sig-line" style="margin-left: 40px;"></div> Mentor Signature / Date
+        <div class="sig-line" style="margin-left: 40px;"></div> HSE Manager Signature / Date
+      </div>
+
+      <script>
+        window.onload = () => {
+          window.print();
+          window.close();
+        };
+      </script>
+    </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '', 'width=800,height=600');
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+}
+
+// =================================================================
+// PRINT FUNCTIONS — RESTRICTED ACTIVITIES AGREEMENT
+// =================================================================
+async function openRestrictedActivitiesPrint() {
+  const personId = prompt('Enter BHDC ID to print Restricted Activities Agreement:');
+  if (!personId) return;
+
+  const data = await api('sse_dashboard');
+  const person = data.personnel.find(p => p['BHDC ID'] === personId);
+  if (!person) {
+    alert('Person not found');
+    return;
+  }
+
+  const posCode = person['CAMS Position Code'];
+  const restrictions = POS_RESTRICTIONS[posCode] || [];
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.5; margin: 20px; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .doc-ref { font-size: 10px; color: #666; margin-bottom: 10px; }
+        .person-details { margin: 15px 0; border: 1px solid #ddd; padding: 10px; font-size: 10px; }
+        .person-details div { margin: 3px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 10px; }
+        th, td { border: 1px solid #999; padding: 6px; text-align: left; }
+        th { background: #333; color: white; font-weight: bold; }
+        .sig-block { margin-top: 20px; }
+        .sig-line { display: inline-block; margin-right: 40px; border-top: 1px solid #000; width: 120px; text-align: center; font-size: 9px; }
+        .statement { margin: 15px 0; font-size: 10px; line-height: 1.6; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h2>BHDC Acknowledgement of Restricted Activities During SSE Period</h2>
+        <div class="doc-ref">BHDC-HSE-TRN-FRM-XXX</div>
+      </div>
+
+      <div class="person-details">
+        <div><strong>Name:</strong> ${person['Full Name']} | <strong>BHDC ID:</strong> ${person['BHDC ID']}</div>
+        <div><strong>Position:</strong> ${person.Position} | <strong>Rig:</strong> ${person.Rig} | <strong>Mentor:</strong> ${person['SSE Mentor'] || '—'}</div>
+      </div>
+
+      <div class="statement">
+        During your Supervised Site Experience (SSE) period, certain activities are restricted based on your role and experience level. The restrictions listed below apply until your SSE is formally completed and signed off by your Mentor and the HSE Manager. Performing restricted activities without authorisation may result in disciplinary action and poses a serious risk to personnel safety.
+      </div>
+
+      <table>
+        <thead><tr><th>Restriction Code</th><th>Description</th><th>Type</th><th>Status</th></tr></thead>
+        <tbody>
+  `;
+
+  restrictions.forEach(r => {
+    const typeLabel = r.type === 'NP' ? 'Not Permitted' : 'Supervised';
+    htmlContent += `<tr><td>${r.code}</td><td>${r.desc}</td><td>${typeLabel}</td><td>Active</td></tr>`;
+  });
+
+  htmlContent += `
+        </tbody>
+      </table>
+
+      <div class="statement">
+        <strong>Acknowledgement:</strong> I acknowledge that I have been briefed on the above restricted activities applicable to my role. I understand that these restrictions are in place for my safety and the safety of my colleagues. I agree to comply with all restrictions until my SSE is formally completed and I am authorised to perform these activities independently.
+      </div>
+
+      <div class="sig-block">
+        <div class="sig-line"></div> Employee Signature / Date
+        <div class="sig-line" style="margin-left: 40px;"></div> Mentor Signature / Date
+        <div class="sig-line" style="margin-left: 40px;"></div> HSE Manager Signature / Date
+      </div>
+
+      <script>
+        window.onload = () => {
+          window.print();
+          window.close();
+        };
+      </script>
+    </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '', 'width=800,height=600');
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+}
+
+// =================================================================
+// PRINT FUNCTIONS — INDUCTION CHECKLIST
+// =================================================================
+async function openInductionChecklistPrint() {
+  const personId = prompt('Enter BHDC ID to print Induction Checklist:');
+  if (!personId) return;
+
+  const data = await api('induction_dashboard');
+  const person = data.personnel.find(p => p['BHDC ID'] === personId);
+  if (!person) {
+    alert('Person not found');
+    return;
+  }
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.4; margin: 20px; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .doc-ref { font-size: 10px; color: #666; margin-bottom: 10px; }
+        .person-details { margin: 15px 0; border: 1px solid #ddd; padding: 10px; font-size: 10px; }
+        .person-details div { margin: 3px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #999; padding: 6px; text-align: left; }
+        th { background: #333; color: white; font-weight: bold; }
+        .sig-block { margin-top: 20px; }
+        .sig-line { display: inline-block; margin-right: 40px; border-top: 1px solid #000; width: 120px; text-align: center; font-size: 9px; }
+        .task-section { margin-top: 12px; font-weight: bold; background: #f0f0f0; padding: 4px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h2>BHDC M1 Site Induction Checklist</h2>
+        <div class="doc-ref">BHDC-HSE-TRN-FRM-XXX</div>
+      </div>
+
+      <div class="person-details">
+        <div><strong>Name:</strong> ${person['Full Name']} | <strong>BHDC ID:</strong> ${person['BHDC ID']}</div>
+        <div><strong>Position:</strong> ${person.Position} | <strong>Rig:</strong> ${person.Rig} | <strong>Date of Hire:</strong> ${person['Date of Hire'] || '—'}</div>
+      </div>
+
+      <table>
+        <thead><tr><th>Task Code</th><th>Description</th><th>Date Completed</th><th>HSE Advisor Signature</th></tr></thead>
+        <tbody>
+  `;
+
+  let currentSection = '';
+  IND_TASKS.forEach(task => {
+    if (task.section !== currentSection) {
+      htmlContent += `<tr><td colspan="4" class="task-section">Section ${task.section} — ${task.sectionName}</td></tr>`;
+      currentSection = task.section;
+    }
+    htmlContent += `<tr><td>${task.code}</td><td>${task.desc}</td><td></td><td></td></tr>`;
+  });
+
+  htmlContent += `
+        </tbody>
+      </table>
+
+      <div style="margin-top: 20px; font-size: 10px; line-height: 1.6;">
+        <p><strong>Acknowledgement:</strong> I confirm that I have received and understood the site-specific induction content detailed above. I acknowledge that the information provided is essential for my safety and the safety of others on site. I confirm that the information recorded above is true and accurate to the best of my knowledge.</p>
+      </div>
+
+      <div class="sig-block">
+        <div class="sig-line"></div> Employee / Inductee Signature / Date
+        <div class="sig-line" style="margin-left: 40px;"></div> HSE Advisor Signature / Date
+        <div class="sig-line" style="margin-left: 40px;"></div> HSE Manager Signature / Date
+      </div>
+
+      <script>
+        window.onload = () => {
+          window.print();
+          window.close();
+        };
+      </script>
+    </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '', 'width=800,height=600');
+  printWindow.document.write(htmlContent);
+  printWindow.document.close();
+}
+
+// =================================================================
+// GRANDFATHERING CHECK
+// =================================================================
+async function runGrandfatheringCheck() {
+  if (!confirm('Run SSE grandfathering check for all employees >6 months? This will mark eligible personnel as GRANDFATHERED.')) return;
+
+  const result = await apiPost('grandfather_sse', {});
+  if (result && result.success) {
+    alert(`Grandfathering complete: ${result.count} personnel marked as grandfathered`);
+    loadSSEDashboard();
+  } else {
+    alert('Error running grandfathering check');
+  }
+}
+
+// Multi-language translations
+const TRANSLATIONS = {
+  en: {
+    dashboard: 'Dashboard', personnel: 'Personnel', training: 'Training Register', itldash: 'ITL Dashboard',
+    ssedash: 'SSE Dashboard', inductiondash: 'Induction Dashboard', vocdash: 'VOC Dashboard', settings: 'Settings',
+    sseDashTitle: 'SSE Competency Dashboard', inductionDashTitle: 'M1 Induction Dashboard',
+    sseStatusByRig: 'SSE Status by Rig', sseProgressOverTime: 'SSE Progress Over Time', sseInProgress: 'SSE In Progress',
+    printFunctions: 'Print Functions', printSSEChecklist: 'Print SSE Checklist', printRestrictedActivities: 'Print Restricted Activities Agreement',
+    incompleteInductions: 'Incomplete Inductions',
+    personnelRequiringSSE: 'Personnel Requiring SSE', grandfathered: 'Grandfathered', sseCompletionRate: 'SSE Completion Rate %',
+    overdueSSE: 'Overdue SSE count', personnelRequiringInduction: 'Personnel Requiring Induction',
+    inductionCompletionRate: 'Induction Completion Rate %',
+  },
+  ar: {
+    dashboard: 'لوحة المعلومات', personnel: 'الموظفون', training: 'سجل التدريب', itldash: 'لوحة معلومات ITL',
+    ssedash: 'لوحة معلومات SSE', inductiondash: 'لوحة معلومات الاستقبال', vocdash: 'لوحة معلومات VOC', settings: 'الإعدادات',
+    sseDashTitle: 'لوحة معلومات كفاءة SSE', inductionDashTitle: 'لوحة معلومات الاستقبال M1',
+    sseStatusByRig: 'حالة SSE حسب الجهاز', sseProgressOverTime: 'تقدم SSE على مرور الوقت', sseInProgress: 'SSE قيد التقدم',
+    printFunctions: 'وظائف الطباعة', printSSEChecklist: 'طباعة قائمة التحقق من SSE', printRestrictedActivities: 'طباعة اتفاقية الأنشطة المقيدة',
+    incompleteInductions: 'الاستقبالات غير المكتملة',
+    personnelRequiringSSE: 'الموظفون الذين يتطلبون SSE', grandfathered: 'معفيين', sseCompletionRate: 'معدل إكمال SSE %',
+    overdueSSE: 'عدد SSE المتأخرة', personnelRequiringInduction: 'الموظفون الذين يتطلبون الاستقبال',
+    inductionCompletionRate: 'معدل إكمال الاستقبال %',
+  },
+  hi: {
+    dashboard: 'डैशबोर्ड', personnel: 'कर्मचारी', training: 'प्रशिक्षण रजिस्टर', itldash: 'ITL डैशबोर्ड',
+    ssedash: 'SSE डैशबोर्ड', inductiondash: 'प्रेरण डैशबोर्ड', vocdash: 'VOC डैशबोर्ड', settings: 'सेटिंग्स',
+    sseDashTitle: 'SSE योग्यता डैशबोर्ड', inductionDashTitle: 'M1 प्रेरण डैशबोर्ड',
+    sseStatusByRig: 'रिग द्वारा SSE स्थिति', sseProgressOverTime: 'समय के साथ SSE प्रगति', sseInProgress: 'SSE प्रगति में',
+    printFunctions: 'प्रिंट फ़ंक्शन', printSSEChecklist: 'SSE चेकलिस्ट प्रिंट करें', printRestrictedActivities: 'प्रतिबंधित गतिविधि समझौता प्रिंट करें',
+    incompleteInductions: 'अधूरे प्रेरण',
+    personnelRequiringSSE: 'SSE की आवश्यकता वाले कर्मचारी', grandfathered: 'दादाजी', sseCompletionRate: 'SSE समापन दर %',
+    overdueSSE: 'समय से पहले SSE की संख्या', personnelRequiringInduction: 'प्रेरण की आवश्यकता वाले कर्मचारी',
+    inductionCompletionRate: 'प्रेरण समापन दर %',
+  },
+  zh: {
+    dashboard: '仪表板', personnel: '人员', training: '培训登记', itldash: 'ITL仪表板',
+    ssedash: 'SSE仪表板', inductiondash: '入职仪表板', vocdash: 'VOC仪表板', settings: '设置',
+    sseDashTitle: 'SSE能力仪表板', inductionDashTitle: 'M1入职仪表板',
+    sseStatusByRig: '按钻机的SSE状态', sseProgressOverTime: '随时间推移的SSE进度', sseInProgress: '正在进行SSE',
+    printFunctions: '打印功能', printSSEChecklist: '打印SSE检查表', printRestrictedActivities: '打印受限活动协议',
+    incompleteInductions: '未完成的入职',
+    personnelRequiringSSE: '需要SSE的人员', grandfathered: '豁免', sseCompletionRate: 'SSE完成率%',
+    overdueSSE: '逾期SSE数量', personnelRequiringInduction: '需要入职的人员',
+    inductionCompletionRate: '入职完成率%',
+  }
+};
+
+let CURRENT_LANGUAGE = 'en';
+
+// Demo data — connect backend for live data
 function getDemoPersonnel() {
-  return [
-    {'BHDC ID':'BHDC-P-001','Full Name':'Kaleemullah Jan','CAMS Position Code':'TP','CAMS Position':'Toolpusher','Rig':'BHDC 67','Department':'Drilling','Nationality':'Pakistani','Religion':'Islam','Date of Hire':'2023-06-15','SSE Status':'NO','M1 Status':'NO','M4 Status':'\u2014','M5 OTC %':'\u2014'},
-    {'BHDC ID':'BHDC-P-002','Full Name':'Odibo Ufuoma Okiemute','CAMS Position Code':'TP','CAMS Position':'Toolpusher','Rig':'BHDC 67','Department':'Drilling','Nationality':'Nigerian','Religion':'Christian','Date of Hire':'2022-11-01','SSE Status':'NO','M1 Status':'NO'},
-    {'BHDC ID':'BHDC-P-003','Full Name':'Manas Ranjan Panda','CAMS Position Code':'TP','CAMS Position':'Toolpusher','Rig':'BHDC 67','Department':'Drilling','Nationality':'Indian','Religion':'Hindu','Date of Hire':'2024-02-10','SSE Status':'NO','M1 Status':'NO'},
-    {'BHDC ID':'BHDC-P-010','Full Name':'Ahmed Al-Thani','CAMS Position Code':'DR','CAMS Position':'Driller','Rig':'BHDC 67','Department':'Drilling','Nationality':'Qatari','Religion':'Islam','Date of Hire':'2019-03-01','SSE Status':'YES','M1 Status':'YES'},
-    {'BHDC ID':'BHDC-P-020','Full Name':'Rajesh Kumar','CAMS Position Code':'HS','CAMS Position':'HSE Specialist','Rig':'BHDC 68','Department':'HSE','Nationality':'Indian','Religion':'Hindu','Date of Hire':'2024-08-15','SSE Status':'NO','M1 Status':'NO'},
-    {'BHDC ID':'BHDC-P-030','Full Name':'Mohammed Al-Kuwari','CAMS Position Code':'MD','CAMS Position':'Medic','Rig':'BHDC 117','Department':'Medical','Nationality':'Qatari','Religion':'Islam','Date of Hire':'2021-01-20','SSE Status':'NO','M1 Status':'NO'},
-    {'BHDC ID':'BHDC-P-040','Full Name':'John Smith','CAMS Position Code':'RO','CAMS Position':'Roustabout','Rig':'BHDC 118','Department':'Operations','Nationality':'British','Religion':'Christian','Date of Hire':'2026-01-05','SSE Status':'YES','M1 Status':'NO'},
-    {'BHDC ID':'BHDC-P-999','Full Name':'DEMO \u2014 Connect backend for full data','CAMS Position Code':'\u2014','CAMS Position':'','Rig':'\u2014','Department':'','Nationality':'','Religion':'','Date of Hire':'','SSE Status':'NO','M1 Status':'\u2014'},
-  ];
+  return [];
 }
 </script>
 </body>
