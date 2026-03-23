@@ -317,7 +317,7 @@ html[dir="rtl"] tbody td { text-align: right; }
         </div>
         <div style="max-height:600px;overflow-y:auto;">
           <table><thead><tr>
-            <th>BHDC ID</th><th>Name</th><th>Position</th><th>Rig</th><th>Nationality</th><th>Hire Date</th><th>Induction</th><th>ITL</th><th>TNA OTC</th><th>SSE</th>
+            <th>BHDC ID</th><th>Name</th><th>Position</th><th>Rig</th><th>Nationality</th><th>Hire Date</th><th>Induction</th><th>SSE</th><th>ITL</th><th>OTC</th>
           </tr></thead><tbody id="pTable"></tbody></table>
         </div>
       </div>
@@ -910,12 +910,10 @@ function renderPersonnel(list) {
 
   document.getElementById('pCount').textContent = `${filtered.length} of ${list.length}`;
   document.getElementById('pTable').innerHTML = filtered.slice(0, 200).map(p => {
-    const m1 = p['M1 Status'] || '\u2014';
-    const m4 = p['M4 Status'];
-    const m5 = p['M5 OTC %'];
-    const m4Display = (m4 && m4 !== '\u2014') ? Math.round(m4 * 100) + '%' : '\u2014';
-    const m5Display = (m5 && m5 !== '\u2014') ? Math.round(m5 * 100) + '%' : '\u2014';
-    const sse = p['SSE Status'] === 'GRANDFATHERED' ? '<span class="badge green">GF</span>' : (p['SSE Status'] === 'YES' ? '<span class="badge amber">SSE</span>' : (needsSSE(p) ? '<span class="badge red">REQ</span>' : ''));
+    const ind = p._indStatus || '\u2014';
+    const sse = p._sseStatus || '\u2014';
+    const itl = p._itlStatus || '\u2014';
+    const otc = p._otcStatus || '\u2014';
     const nat = p['Nationality'] || '';
     const hire = p['Date of Hire'] || '';
     return `<tr class="clickable" onclick="showPersonProfile('${p['BHDC ID']}')">
@@ -925,10 +923,10 @@ function renderPersonnel(list) {
       <td>${p['Rig'] || ''}</td>
       <td>${nat}</td>
       <td>${hire}</td>
-      <td>${badgeStatus(m1)}</td>
-      <td>${m4Display}</td>
-      <td>${m5Display}</td>
-      <td>${sse}</td>
+      <td>${moduleStatusBadge(ind)}</td>
+      <td>${moduleStatusBadge(sse)}</td>
+      <td>${moduleStatusBadge(itl)}</td>
+      <td>${moduleStatusBadge(otc)}</td>
     </tr>`;
   }).join('');
 }
@@ -2602,6 +2600,20 @@ function badgeStatus(val) {
   if (val === 'YES') return '<span class="badge green">YES</span>';
   if (val === 'NO') return '<span class="badge red">NO</span>';
   return '<span class="badge grey">\u2014</span>';
+}
+
+function moduleStatusBadge(val) {
+  if (!val || val === '\u2014') return '<span class="badge grey">\u2014</span>';
+  if (val === 'Complete') return '<span class="badge green">Complete</span>';
+  if (val === 'Overdue') return '<span class="badge red">Overdue</span>';
+  if (val === 'Due') return '<span class="badge amber">Due</span>';
+  // Percentage value like "45%"
+  if (val.endsWith('%')) {
+    const n = parseInt(val);
+    const cls = n >= 75 ? 'green' : n >= 40 ? 'amber' : 'red';
+    return '<span class="badge ' + cls + '">' + val + '</span>';
+  }
+  return '<span class="badge grey">' + val + '</span>';
 }
 
 function resultBadge(val) {
