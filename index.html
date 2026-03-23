@@ -2695,45 +2695,45 @@ function setLanguage(lang) {
 // =================================================================
 async function loadSSEDashboard() {
   const data = await api('sse_dashboard');
-  if (!data) {
+  if (!data || data.error) {
     document.getElementById('sseCards').innerHTML = '<p style="padding:20px;color:var(--grey);">No data — connect to backend</p>';
     return;
   }
 
-  const rigFilter = document.getElementById('sseRigFilter').value;
-  const filtered = rigFilter ? data.personnel.filter(p => p.Rig === rigFilter) : data.personnel;
-
-  // KPI Cards
-  const requiring = filtered.filter(p => needsSSE(p)).length;
-  const grandfathered = filtered.filter(p => p['SSE Grandfathered'] === 'YES').length;
-  const completionRate = filtered.length > 0 ? Math.round(filtered.filter(p => p['SSE Status'] === 'YES' || p['SSE Graduated'] === 'YES').length / filtered.length * 100) : 0;
-  const overdue = filtered.filter(p => p['SSE Status'] === 'YES' && new Date() > new Date(p['SSE Target End'])).length;
-
+  // KPI Cards — use pre-computed values from backend
   document.getElementById('sseCards').innerHTML = `
-    <div class="card"><div class="label" data-i18n="personnelRequiringSSE">Personnel Requiring SSE</div><div class="value">${requiring}</div></div>
-    <div class="card green"><div class="label" data-i18n="grandfathered">Grandfathered</div><div class="value">${grandfathered}</div></div>
-    <div class="card"><div class="label" data-i18n="sseCompletionRate">SSE Completion Rate %</div><div class="value">${completionRate}%</div></div>
-    <div class="card red"><div class="label" data-i18n="overdueSSE">Overdue SSE count</div><div class="value">${overdue}</div></div>
+    <div class="card"><div class="label" data-i18n="personnelRequiringSSE">Personnel Requiring SSE</div><div class="value">${data.sseRequired || 0}</div></div>
+    <div class="card green"><div class="label" data-i18n="grandfathered">Grandfathered</div><div class="value">${data.grandfathered || 0}</div></div>
+    <div class="card"><div class="label" data-i18n="sseCompletionRate">SSE Completion Rate %</div><div class="value">${data.sseCompletionRate || 0}%</div></div>
+    <div class="card red"><div class="label" data-i18n="overdueSSE">Overdue SSE count</div><div class="value">${data.sseOverdue || 0}</div></div>
   `;
 
-  // Table
-  const inProgress = filtered.filter(p => p['SSE Status'] === 'YES' && p['SSE Graduated'] !== 'YES');
+  // Rig breakdown (if available)
+  if (data.rigBreakdown) {
+    let rigHtml = '';
+    Object.entries(data.rigBreakdown).forEach(([rig, info]) => {
+      rigHtml += `<div class="card" style="min-width:120px;"><div class="label">${rig}</div><div class="value">${info.complete}/${info.total} <span style="font-size:12px;color:var(--grey);">(${info.pct}%)</span></div></div>`;
+    });
+    const rigContainer = document.getElementById('sseRigBreakdown');
+    if (rigContainer) rigContainer.innerHTML = rigHtml;
+  }
+
+  // In-Progress Table — use backend's pre-built list
+  const inProgress = data.inProgress || [];
   let tableHtml = '';
   inProgress.forEach(p => {
-    const startDate = new Date(p['SSE Start Date']).toLocaleDateString();
-    const endDate = new Date(p['SSE Target End']).toLocaleDateString();
-    const daysRemaining = Math.ceil((new Date(p['SSE Target End']) - new Date()) / (1000*60*60*24));
-    tableHtml += `<tr class="clickable" onclick="viewPersonProfile('${p['BHDC ID']}')">
-      <td>${p['Full Name']}</td><td>${p.Rig}</td><td>${p.Position}</td>
-      <td>${p['SSE Mentor'] || '—'}</td><td>${startDate}</td><td>${endDate}</td>
+    const startDate = p.sseStart ? new Date(p.sseStart).toLocaleDateString() : '—';
+    const endDate = p.sseTargetEnd ? new Date(p.sseTargetEnd).toLocaleDateString() : '—';
+    const daysRemaining = p.daysRemaining != null ? p.daysRemaining : 0;
+    tableHtml += `<tr class="clickable" onclick="viewPersonProfile('${p.bhdcId}')">
+      <td>${p.name}</td><td>${p.rig}</td><td>${p.position || '—'}</td>
+      <td>${p.mentor || '—'}</td><td>${startDate}</td><td>${endDate}</td>
       <td>${daysRemaining > 0 ? daysRemaining : 0}</td>
-      <td><span class="badge ${daysRemaining > 30 ? 'blue' : daysRemaining > 0 ? 'amber' : 'red'}">${p['SSE Status']}</span></td>
+      <td><span class="badge ${daysRemaining > 30 ? 'blue' : daysRemaining > 0 ? 'amber' : 'red'}">Active</span></td>
     </tr>`;
   });
   document.getElementById('sseInProgressTable').innerHTML = tableHtml || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--grey);">No SSE in progress</td></tr>';
-  document.getElementById('sseCount').textContent = `${inProgress.length} in progress`;
-
-  refreshSSEDashboard();
+  document.getElementById('sseCount').textContent = `${data.inProgressCount || inProgress.length} in progress`;
 }
 
 function refreshSSEDashboard() {
@@ -2745,44 +2745,44 @@ function refreshSSEDashboard() {
 // =================================================================
 async function loadInductionDashboard() {
   const data = await api('induction_dashboard');
-  if (!data) {
+  if (!data || data.error) {
     document.getElementById('inductionCards').innerHTML = '<p style="padding:20px;color:var(--grey);">No data — connect to backend</p>';
     return;
   }
 
-  const rigFilter = document.getElementById('indRigFilter').value;
-  const filtered = rigFilter ? data.personnel.filter(p => p.Rig === rigFilter) : data.personnel;
-
-  const requiring = filtered.filter(p => !p['M1 Complete Date']).length;
-  const grandfathered = filtered.filter(p => p['M1 Grandfathered'] === 'YES').length;
-  const completionRate = filtered.length > 0 ? Math.round(filtered.filter(p => p['M1 Complete Date']).length / filtered.length * 100) : 0;
-  const incomplete = filtered.filter(p => !p['M1 Complete Date']).length;
-
+  // KPI Cards — use pre-computed values from backend
   document.getElementById('inductionCards').innerHTML = `
-    <div class="card"><div class="label" data-i18n="personnelRequiringInduction">Personnel Requiring Induction</div><div class="value">${requiring}</div></div>
-    <div class="card green"><div class="label" data-i18n="grandfathered">Grandfathered</div><div class="value">${grandfathered}</div></div>
-    <div class="card"><div class="label" data-i18n="inductionCompletionRate">Induction Completion Rate %</div><div class="value">${completionRate}%</div></div>
-    <div class="card red"><div class="label" data-i18n="incompleteInductions">Incomplete Inductions</div><div class="value">${incomplete}</div></div>
+    <div class="card"><div class="label" data-i18n="personnelRequiringInduction">Personnel Requiring Induction</div><div class="value">${data.inductionRequired || 0}</div></div>
+    <div class="card green"><div class="label" data-i18n="grandfathered">Grandfathered</div><div class="value">${data.grandfathered || 0}</div></div>
+    <div class="card"><div class="label" data-i18n="inductionCompletionRate">Induction Completion Rate %</div><div class="value">${data.m1CompletionRate || 0}%</div></div>
+    <div class="card red"><div class="label" data-i18n="incompleteInductions">Incomplete Inductions</div><div class="value">${data.incompleteCount || 0}</div></div>
   `;
 
-  // Table
-  const incompleteList = filtered.filter(p => !p['M1 Complete Date']);
+  // Rig breakdown (if available)
+  if (data.rigBreakdown) {
+    let rigHtml = '';
+    Object.entries(data.rigBreakdown).forEach(([rig, info]) => {
+      rigHtml += `<div class="card" style="min-width:120px;"><div class="label">${rig}</div><div class="value">${info.complete}/${info.total} <span style="font-size:12px;color:var(--grey);">(${info.pct}%)</span></div></div>`;
+    });
+    const rigContainer = document.getElementById('indRigBreakdown');
+    if (rigContainer) rigContainer.innerHTML = rigHtml;
+  }
+
+  // Incomplete Table — use backend's pre-built list
+  const incompleteList = data.incomplete || [];
   let tableHtml = '';
   incompleteList.forEach(p => {
-    const hireDate = new Date(p['Date of Hire']).toLocaleDateString();
-    const daysSinceHire = Math.ceil((new Date() - new Date(p['Date of Hire'])) / (1000*60*60*24));
-    const tasksComplete = p['M1 Tasks Complete'] || 0;
-    tableHtml += `<tr class="clickable" onclick="viewPersonProfile('${p['BHDC ID']}')">
-      <td>${p['Full Name']}</td><td>${p.Rig}</td><td>${p.Position}</td>
+    const hireDate = p.dateOfHire ? new Date(p.dateOfHire).toLocaleDateString() : '—';
+    const daysSinceHire = p.daysSinceHire != null ? p.daysSinceHire : '—';
+    tableHtml += `<tr class="clickable" onclick="viewPersonProfile('${p.bhdcId}')">
+      <td>${p.name}</td><td>${p.rig}</td><td>${p.position || '—'}</td>
       <td>${hireDate}</td><td>${daysSinceHire}</td>
-      <td>${tasksComplete}/27</td>
-      <td><span class="badge ${tasksComplete === 27 ? 'green' : tasksComplete > 13 ? 'amber' : 'red'}">${tasksComplete === 27 ? 'Complete' : 'In Progress'}</span></td>
+      <td>—</td>
+      <td><span class="badge amber">In Progress</span></td>
     </tr>`;
   });
   document.getElementById('incompleteInductionTable').innerHTML = tableHtml || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--grey);">All inductions complete</td></tr>';
-  document.getElementById('inductionCount').textContent = `${incompleteList.length} incomplete`;
-
-  refreshInductionDashboard();
+  document.getElementById('inductionCount').textContent = `${data.incompleteCount || incompleteList.length} incomplete`;
 }
 
 function refreshInductionDashboard() {
